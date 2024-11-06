@@ -31,7 +31,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 
 
-// Login crud
+// Login crud...
 export const login = async (req: Request, res: Response): Promise<void> => {
     const { firstname, password } = req.body;
 
