@@ -40,14 +40,14 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         const result = await pool.query(query, [firstname]);
 
         if (result.rowCount === 0) {
-            res.status(400).json({ message: "User not found" });
+            res.status(400).json({ message: "Username or password incorrect" });
             return;
         }
 
         const user = result.rows[0];
         const isPasswordMatch = await bcrypt.compare(password, user.password);
         if (!isPasswordMatch) {
-            res.status(400).json({ message: "Invalid password" });
+            res.status(400).json({ message: "Username or password incorrect" });
             return;
         }
 
