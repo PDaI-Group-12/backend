@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { pool } from "../database/connection";
 
-// Function to get user data and salary by user ID
 export const getUserDataAndSalary = async (req: Request, res: Response): Promise<void> => {
     const { userId } = req.params;
 
@@ -37,10 +36,10 @@ export const getUserDataAndSalary = async (req: Request, res: Response): Promise
         res.status(500).json({ message: "Error fetching user data", error });
     }
 };
+
 export const addUserHistory = async (req: Request, res: Response): Promise<void> => {
     const { userid, hours } = req.body;
 
-    // Tarkistetaan, että hours on positiivinen luku
     if (hours <= 0) {
         res.status(400).json({ message: "Hours must be a positive number" });
         return;
@@ -62,7 +61,7 @@ export const addUserHistory = async (req: Request, res: Response): Promise<void>
 };
 
 export const getUserHistory = async (req: Request, res: Response): Promise<void> => {
-    const { userid } = req.params;  // Haetaan userId URL-parametrista
+    const { userid } = req.params;
 
     try {
         const query = `
