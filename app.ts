@@ -9,6 +9,7 @@ import {usersRouter} from "./routes/users";
 import { authRouter } from "./routes/auth";
 import {pool} from "./database/connection";
 import {userRouter} from "./routes/user";
+import {salaryRouter} from "./routes/salary";
 
 export const app = express();
 
@@ -34,3 +35,5 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/auth', authRouter);
 app.use('/user', userRouter);
+app.use('/setSalary', salaryRouter);
+
