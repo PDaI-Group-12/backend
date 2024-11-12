@@ -37,3 +37,49 @@ export const getUserDataAndSalary = async (req: Request, res: Response): Promise
         res.status(500).json({ message: "Error fetching user data", error });
     }
 };
+export const addUserHistory = async (req: Request, res: Response): Promise<void> => {
+    const { userid, hours } = req.body;
+
+    // Tarkistetaan, että hours on positiivinen luku
+    if (hours <= 0) {
+        res.status(400).json({ message: "Hours must be a positive number" });
+        return;
+    }
+
+    try {
+        const query = `
+            INSERT INTO history (userid, hours)
+            VALUES ($1, $2)
+            RETURNING userid, hours
+        `;
+        const result = await pool.query(query, [userid, hours]);
+
+        res.status(201).json({ message: "History entry added successfully", entry: result.rows[0] });
+    } catch (error) {
+        console.error("Error adding user history:", error);
+        res.status(500).json({ message: "Error adding user history", error });
+    }
+};
+
+export const getUserHistory = async (req: Request, res: Response): Promise<void> => {
+    const { userid } = req.params;  // Haetaan userId URL-parametrista
+
+    try {
+        const query = `
+            SELECT id, userid, hours
+            FROM history
+            WHERE userid = $1
+        `;
+        const result = await pool.query(query, [userid]);
+
+        if (result.rowCount === 0) {
+            res.status(404).json({ message: "No history found for this user" });
+            return;
+        }
+
+        res.json({ history: result.rows });
+    } catch (error) {
+        console.error("Error fetching user history:", error);
+        res.status(500).json({ message: "Error fetching user history", error });
+    }
+};
