@@ -5,8 +5,10 @@ import logger from "morgan";
 import cors from "cors";
 import {indexRouter} from "./routes";
 import {usersRouter} from "./routes/users";
+
 import { authRouter } from "./routes/auth";
 import {pool} from "./database/connection";
+import {userRouter} from "./routes/user";
 
 export const app = express();
 
@@ -31,3 +33,4 @@ app.listen(3000, () => {
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/auth', authRouter);
+app.use('/user', userRouter);
