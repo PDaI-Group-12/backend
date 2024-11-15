@@ -179,3 +179,62 @@ export const getAllEmployers = async (req: Request, res: Response): Promise<void
         res.status(500).json({ error: "Failed to fetch employers" });
     }
 };
+
+export const paymentDone = async (req: Request, res: Response): Promise<void> => {
+    const { employerId, employeeId } = req.params;
+
+    try {
+        // 1. Check if the employerId is valid and the user is an employer
+        const employerCheckQuery = `SELECT id, role FROM "user" WHERE id = $1 AND role = 'employer'`;
+        const employerResult = await pool.query(employerCheckQuery, [employerId]);
+
+        if (employerResult.rowCount === 0) {
+            res.status(403).json({ message: "Only employers can make payment requests" });
+            return;
+        }
+
+        // 2. Fetch the total hours worked by the employee from the 'request' table
+        const hoursQuery = `SELECT SUM(hours) AS total_hours FROM request WHERE userid = $1`;
+        const hoursResult = await pool.query(hoursQuery, [employeeId]);
+
+        if (hoursResult.rowCount === 0 || !hoursResult.rows[0].total_hours) {
+            res.status(404).json({ message: "No hours found for this employee" });
+            return;
+        }
+
+        const totalHours = hoursResult.rows[0].total_hours;
+
+        // 3. Fetch the hourly salary from the 'hour_salary' table for the employee
+        const salaryQuery = `SELECT salary FROM hour_salary WHERE userid = $1`;
+        const salaryResult = await pool.query(salaryQuery, [employeeId]);
+
+        if (salaryResult.rowCount === 0) {
+            res.status(404).json({ message: "Salary data not found for this employee" });
+            return;
+        }
+
+        const hourlySalary = salaryResult.rows[0].salary;
+
+        // 4. Fetch the fixed salary (if any) from the 'permanent_salary' table
+        const fixedSalaryQuery = `SELECT salary FROM permanent_salary WHERE userid = $1`;
+        const fixedSalaryResult = await pool.query(fixedSalaryQuery, [employeeId]);
+
+        const fixedSalary = fixedSalaryResult.rows.length > 0 ? fixedSalaryResult.rows[0].salary : 0;
+
+        // 5. Calculate the total salary (hours worked * hourly salary + fixed salary)
+        const totalSalary = (totalHours * hourlySalary) + fixedSalary;
+
+        // 6. Return the result as JSON
+        res.status(200).json({
+            employeeId: employeeId,
+            totalHours: totalHours,
+            hourlySalary: hourlySalary,
+            fixedSalary: fixedSalary,
+            totalSalary: totalSalary.toFixed(2) // Return salary as a string with 2 decimal points
+        });
+
+    } catch (error) {
+        console.error("Error processing payment:", error);
+        res.status(500).json({ message: "Error processing payment", error });
+    }
+};
