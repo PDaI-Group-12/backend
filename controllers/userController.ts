@@ -1,25 +1,28 @@
 import { Request, Response } from "express";
 import { pool } from "../database/connection";
 
+// Fetch user data along with salary based on user ID
 export const getUserDataAndSalary = async (req: Request, res: Response): Promise<void> => {
-    const { userId } = req.params;
+    const { userId } = req.params;  // Destructure userId from request parameters
 
     try {
+        // SQL query to fetch user data and associated salary
         const query = `
             SELECT "user".id, "user".firstname, "user".lastname, "user".role, "user".iban, hour_salary.salary
             FROM "user"
             JOIN hour_salary ON "user".id = hour_salary.userid
             WHERE "user".id = $1
         `;
+        const result = await pool.query(query, [userId]);  // Execute query with userId
 
-        const result = await pool.query(query, [userId]);
-
+        // If no user is found, return 404 error
         if (result.rowCount === 0) {
             console.log(`User with ID ${userId} not found.`);
             res.status(404).json({ message: "User not found" });
             return;
         }
 
+        // If user is found, send user data and salary in response
         const userData = result.rows[0];
         res.json({
             user: {
@@ -29,7 +32,7 @@ export const getUserDataAndSalary = async (req: Request, res: Response): Promise
                 role: userData.role,
                 iban: userData.iban
             },
-            salary: userData.salary || "No salary data available"
+            salary: userData.salary || "No salary data available"  // Return salary or a default message if not available
         });
     } catch (error) {
         console.error("Error fetching user data:", error);
@@ -37,21 +40,24 @@ export const getUserDataAndSalary = async (req: Request, res: Response): Promise
     }
 };
 
+// Add a new user history entry for the specified user
 export const addUserHistory = async (req: Request, res: Response): Promise<void> => {
-    const { userid, hours } = req.body;
+    const { userid, hours } = req.body;  // Destructure userid and hours from request body
 
+    // Validate that hours is a positive number
     if (hours <= 0) {
         res.status(400).json({ message: "Hours must be a positive number" });
         return;
     }
 
     try {
+        // SQL query to insert history entry into the database
         const query = `
             INSERT INTO history (userid, hours)
             VALUES ($1, $2)
             RETURNING userid, hours
         `;
-        const result = await pool.query(query, [userid, hours]);
+        const result = await pool.query(query, [userid, hours]);  // Execute query to insert data
 
         res.status(201).json({ message: "History entry added successfully", entry: result.rows[0] });
     } catch (error) {
@@ -60,25 +66,116 @@ export const addUserHistory = async (req: Request, res: Response): Promise<void>
     }
 };
 
+// Fetch the user's history (hours worked)
 export const getUserHistory = async (req: Request, res: Response): Promise<void> => {
-    const { userid } = req.params;
+    const { userid } = req.body;  // Get userid from request body
 
     try {
+        // SQL query to get the user's history (worked hours)
         const query = `
             SELECT id, userid, hours
             FROM history
             WHERE userid = $1
         `;
-        const result = await pool.query(query, [userid]);
+        const result = await pool.query(query, [userid]);  // Execute query to fetch history
 
+        // If no history is found, return 404 error
         if (result.rowCount === 0) {
             res.status(404).json({ message: "No history found for this user" });
             return;
         }
 
+        // Return the user's history in the response
         res.json({ history: result.rows });
     } catch (error) {
         console.error("Error fetching user history:", error);
         res.status(500).json({ message: "Error fetching user history", error });
+    }
+};
+
+// Process a payment request based on total hours worked and remaining hours
+export const paymentRequest = async (req: Request, res: Response): Promise<void> => {
+    const { userid } = req.params;  // Get userid from request parameters
+
+    if (!userid) {
+        res.status(400).json({ message: "Missing userid" });
+        return;
+    }
+
+    try {
+        // Query to get total hours worked by the user from history
+        const totalHoursQuery = `
+            SELECT SUM(hours) AS total_hours
+            FROM history
+            WHERE userid = $1
+            GROUP BY userid;
+        `;
+        const totalHoursResult = await pool.query(totalHoursQuery, [userid]);
+
+        // If no history found for the user, return 404 error
+        if (totalHoursResult.rowCount === 0) {
+            res.status(404).json({ message: "No history found for the user" });
+            return;
+        }
+
+        const total_hours = totalHoursResult.rows[0].total_hours;  // Total hours worked
+
+        // Query to check how many hours have already been requested for payment
+        const requestedHoursQuery = `
+            SELECT COALESCE(SUM(hours), 0) AS requested_hours
+            FROM request
+            WHERE userid = $1
+            GROUP BY userid;
+        `;
+        const requestedHoursResult = await pool.query(requestedHoursQuery, [userid]);
+
+        const requested_hours = requestedHoursResult.rows[0]?.requested_hours ?? 0;  // Total requested hours (default to 0 if not found)
+
+        // Calculate remaining hours that can be requested
+        const remaining_hours = total_hours - requested_hours;
+
+        if (remaining_hours <= 0) {
+            res.status(400).json({ message: "No remaining hours to request" });
+            return;
+        }
+
+        // Insert the remaining hours as a new request entry in the database
+        const insertQuery = `
+            INSERT INTO request (userid, hours)
+            VALUES ($1, $2)
+            RETURNING userid, hours;
+        `;
+        const insertResult = await pool.query(insertQuery, [userid, remaining_hours]);
+
+        // Return the payment request record
+        res.status(201).json({
+            message: "Payment request added successfully",
+            request: insertResult.rows[0]
+        });
+    } catch (error) {
+        console.error("Error adding payment request:", error);
+        res.status(500).json({ message: "Error adding payment request", error });
+    }
+};
+
+// Get all employers from the user table
+export const getAllEmployers = async (req: Request, res: Response): Promise<void> => {
+    try {
+        console.log("Fetching employers...");  // Log for debugging
+
+        const query = `SELECT id,firstname,lastname FROM "user" WHERE "role" = 'employer'`;
+        const result = await pool.query(query);
+
+        if (result.rows.length === 0) {
+            console.log("No employers found");  // Log when no employers are found
+            res.status(404).json({ message: "No employers found" });
+            return;
+        }
+
+        console.log("Employers found:", result.rows);  // Log when employers are found
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error("Error fetching employers:", error);
+        res.status(500).json({ error: "Failed to fetch employers" });
     }
 };
