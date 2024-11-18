@@ -26,7 +26,7 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/auth', authRouter);
 app.use('/user', userRouter);
-app.use('/setSalary', salaryRouter);
+app.use('/salary', salaryRouter);
 app.use('/test', testRouter);
 
 // Database connection and server start
