@@ -2,29 +2,30 @@
 import { Request, Response } from "express";
 import { pool } from "../database/connection";
 
-// Fetch user data along with salary based on user ID
+// Fetch user data along with hourly salary based on user ID
 export const getUserDataAndSalary = async (req: Request, res: Response): Promise<void> => {
-    const { userId } = req.params;  // Destructure userId from request parameters
+    const { userid } = req.params;  // Destructure userId from request parameters
 
     try {
         // SQL query to fetch user data and associated salary
-        const query = `
+        const userDataQuery = `
             SELECT "user".id, "user".firstname, "user".lastname, "user".role, "user".iban, hour_salary.salary
             FROM "user"
-            JOIN hour_salary ON "user".id = hour_salary.userid
-            WHERE "user".id = $1
+            LEFT JOIN hour_salary ON "user".id = hour_salary.userid
+            WHERE "user".Id = $1
         `;
-        const result = await pool.query(query, [userId]);  // Execute query with userId
+        const user_data = await pool.query(userDataQuery, [userid]);  // Execute query with userId
+        console.log('User Data Query Result:', user_data.rows);
 
         // If no user is found, return 404 error
-        if (result.rowCount === 0) {
-            console.log(`User with ID ${userId} not found.`);
+        if (user_data.rowCount === 0) {
+            console.log(`User with ID ${userid} not found.`);
             res.status(404).json({ message: "User not found" });
             return;
         }
 
         // If user is found, send user data and salary in response
-        const userData = result.rows[0];
+        const userData = user_data.rows[0];
         res.json({
             user: {
                 id: userData.id,
@@ -33,7 +34,7 @@ export const getUserDataAndSalary = async (req: Request, res: Response): Promise
                 role: userData.role,
                 iban: userData.iban
             },
-            salary: userData.salary || "No salary data available"  // Return salary or a default message if not available
+            hourlySalary: userData.salary || "No salary data available"  // Return salary or a default message if not available
         });
     } catch (error) {
         console.error("Error fetching user data:", error);
@@ -42,7 +43,7 @@ export const getUserDataAndSalary = async (req: Request, res: Response): Promise
 };
 
 // Add a new user history entry for the specified user
-export const addUserHistory = async (req: Request, res: Response): Promise<void> => {
+export const addHours = async (req: Request, res: Response): Promise<void> => {
     const { userid, hours } = req.body;  // Destructure userid and hours from request body
 
     // Validate that hours is a positive number
@@ -54,22 +55,47 @@ export const addUserHistory = async (req: Request, res: Response): Promise<void>
     try {
         // SQL query to insert history entry into the database
         const query = `
-            INSERT INTO history (userid, hours)
+            INSERT INTO request (userid, hours)
             VALUES ($1, $2)
             RETURNING userid, hours
         `;
         const result = await pool.query(query, [userid, hours]);  // Execute query to insert data
 
-        res.status(201).json({ message: "History entry added successfully", entry: result.rows[0] });
+        res.status(201).json({ message: "Hours added successfully", entry: result.rows[0] });
     } catch (error) {
         console.error("Error adding user history:", error);
         res.status(500).json({ message: "Error adding user history", error });
     }
 };
 
+export const addPermamentSalary = async (req: Request, res: Response): Promise<void> => {
+    const { userid, salary } = req.body;  // Destructure userid and hours from request body
+
+    // Validate that hours is a positive number
+    if (salary <= 0) {
+        res.status(400).json({ message: "Permanent salary must be positive value" });
+        return;
+    }
+
+    try {
+        // SQL query to insert history entry into the database
+        const query = `
+            INSERT INTO permanent_salary (userid, salary)
+            VALUES ($1, $2)
+                RETURNING userid, salary
+        `;
+        const result = await pool.query(query, [userid, salary]);  // Execute query to insert data
+
+        res.status(201).json({ message: "Permanent salary added successfully", entry: result.rows[0] });
+    } catch (error) {
+        console.error("Error adding user history:", error);
+        res.status(500).json({ message: "Error adding permanent salary", error });
+    }
+};
+
 // Fetch the user's history (hours worked)
 export const getUserHistory = async (req: Request, res: Response): Promise<void> => {
-    const { userid } = req.body;  // Get userid from request body
+    const { userid } = req.params;  // Get userid from request body
 
     try {
         // SQL query to get the user's history (worked hours)
@@ -115,7 +141,7 @@ export const paymentRequest = async (req: Request, res: Response): Promise<void>
 
         // If no history found for the user, return 404 error
         if (totalHoursResult.rowCount === 0) {
-            res.status(404).json({ message: "No history found for the user" });
+            res.status(404).json({ message: "No hours found for the user" });
             return;
         }
 
@@ -185,56 +211,91 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
     const { employerId, employeeId } = req.params;
 
     try {
-        // 1. Check if the employerId is valid and the user is an employer
+        // 1. Check if employerId is valid and user is employer
         const employerCheckQuery = `SELECT id, role FROM "user" WHERE id = $1 AND role = 'employer'`;
         const employerResult = await pool.query(employerCheckQuery, [employerId]);
 
         if (employerResult.rowCount === 0) {
-            res.status(403).json({ message: "Only employers can make payment requests" });
+            res.status(403).json({ message: "Sorry, you are not authorized to make payment requests" });
             return;
         }
 
-        // 2. Fetch the total hours worked by the employee from the 'request' table
-        const hoursQuery = `SELECT SUM(hours) AS total_hours FROM request WHERE userid = $1`;
+        // 2. Check if employee has unpaid salaries
+        const salaryCheckQuery = `
+            SELECT userid FROM request WHERE userid = $1
+            UNION
+            SELECT userid FROM permanent_salary WHERE userid = $1
+        `;
+        const salaryCheckResult = await pool.query(salaryCheckQuery, [employeeId]);
+
+        if (salaryCheckResult.rowCount === 0) {
+            res.status(404).json({ message: "Employee has no unpaid salaries" });
+            return;
+        }
+
+        // 3. Sum of requested hours
+        const hoursQuery = `
+            SELECT COALESCE(SUM(hours), 0) AS total_hours 
+            FROM request 
+            WHERE userid = $1
+            `;
         const hoursResult = await pool.query(hoursQuery, [employeeId]);
+        const totalHours = hoursResult.rows[0]?.total_hours || 0;
 
-        if (hoursResult.rowCount === 0 || !hoursResult.rows[0].total_hours) {
-            res.status(404).json({ message: "No hours found for this employee" });
-            return;
-        }
-
-        const totalHours = hoursResult.rows[0].total_hours;
-
-        // 3. Fetch the hourly salary from the 'hour_salary' table for the employee
-        const salaryQuery = `SELECT salary FROM hour_salary WHERE userid = $1`;
+        // 4. Fetch hourly salary
+        const salaryQuery = `
+            SELECT COALESCE(salary, 0) AS salary 
+            FROM hour_salary 
+            WHERE userid = $1
+            `;
         const salaryResult = await pool.query(salaryQuery, [employeeId]);
+        const hourlySalary = salaryResult.rows[0]?.salary || 0;
 
-        if (salaryResult.rowCount === 0) {
-            res.status(404).json({ message: "Salary data not found for this employee" });
-            return;
-        }
+        // 5. Sum of unpaid permanent salaries
+        const permanentSalaryQuery = `
+            SELECT COALESCE(SUM(salary), 0) AS permanentsalary 
+            FROM permanent_salary 
+            WHERE userid = $1
+            `;
+        const permanentSalaryResult = await pool.query(permanentSalaryQuery, [employeeId]);
+        const permanentSalary = permanentSalaryResult.rows[0]?.permanentsalary || 0;
+        console.log('Permanent Salary Query Result:', permanentSalaryResult.rows);
 
-        const hourlySalary = salaryResult.rows[0].salary;
+        // 6. Calculate total salary
+        const totalSalary = (totalHours * hourlySalary) + permanentSalary;
 
-        // 4. Fetch the fixed salary (if any) from the 'permanent_salary' table
-        const fixedSalaryQuery = `SELECT salary FROM permanent_salary WHERE userid = $1`;
-        const fixedSalaryResult = await pool.query(fixedSalaryQuery, [employeeId]);
+        // 7. Delete rows from `request` and `permanent_salary` tables
+        await pool.query("BEGIN");
 
-        const fixedSalary = fixedSalaryResult.rows.length > 0 ? fixedSalaryResult.rows[0].salary : 0;
+        // Delete from `request`
+        const deleteRequestQuery = `DELETE FROM request WHERE userid = $1`;
+        await pool.query(deleteRequestQuery, [employeeId]);
 
-        // 5. Calculate the total salary (hours worked * hourly salary + fixed salary)
-        const totalSalary = (totalHours * hourlySalary) + fixedSalary;
+        // Delete from `permanent_salary`
+        const deletePermanentSalaryQuery = `DELETE FROM permanent_salary WHERE userid = $1`;
+        await pool.query(deletePermanentSalaryQuery, [employeeId]);
 
-        // 6. Return the result as JSON
+        // 8. Insert payment details into history table
+        const historyInsertQuery = `
+            INSERT INTO history (userid, hours, permanent)
+            VALUES ($1, $2, $3)
+        `;
+        await pool.query(historyInsertQuery, [employeeId, totalHours, permanentSalary]);
+
+        await pool.query("COMMIT"); // Commit the transaction
+
+        // 9. Send response
         res.status(200).json({
             employeeId: employeeId,
             totalHours: totalHours,
             hourlySalary: hourlySalary,
-            fixedSalary: fixedSalary,
-            totalSalary: totalSalary.toFixed(2) // Return salary as a string with 2 decimal points
+            permanentSalary: permanentSalary,
+            totalSalary: totalSalary.toFixed(2),
+            message: "Payment processed and paid salaries moved to history successfully",
         });
 
     } catch (error) {
+        await pool.query("ROLLBACK"); // Rollback transaction in case of error
         console.error("Error processing payment:", error);
         res.status(500).json({ message: "Error processing payment", error });
     }
