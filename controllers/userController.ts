@@ -300,3 +300,77 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
         res.status(500).json({ message: "Error processing payment", error });
     }
 };
+export const editUser = async (req: Request, res: Response): Promise<void> => {
+    const { userId } = req.params; // Käyttäjän ID reitistä
+    const { firstname, lastname, role, iban } = req.body; // Päivitettävät tiedot
+
+    try {
+        // Tarkista, että päivitettäviä kenttiä on annettu
+        if (!firstname && !lastname && !role && !iban) {
+            res.status(400).json({ message: "No fields provided for update" });
+            return;
+        }
+
+        // Päivityskysely, joka käyttää COALESCE asettamaan vain annetut arvot
+        const query = `
+            UPDATE "user"
+            SET
+                firstname = COALESCE($1, firstname),
+                lastname = COALESCE($2, lastname),
+                role = COALESCE($3, role),
+                iban = COALESCE($4, iban)
+            WHERE id = $5
+            RETURNING id, firstname, lastname, role, iban
+        `;
+        const values = [firstname, lastname, role, iban, userId];
+
+        // Suoritetaan kysely
+        const result = await pool.query(query, values);
+
+        // Tarkista löytyikö käyttäjä
+        if (result.rowCount === 0) {
+            res.status(404).json({ message: `User with ID ${userId} not found` });
+            return;
+        }
+
+        // Palauta päivitetyt tiedot
+        res.status(200).json({
+            message: "User updated successfully",
+            user: result.rows[0],
+        });
+    } catch (error) {
+        console.error("Error updating user:", error);
+        res.status(500).json({ message: "Error updating user", error });
+    }
+};
+
+export const deleteUser = async (req: Request, res: Response): Promise<void> => {
+    const { userId } = req.params; // Poimitaan käyttäjän id pyynnön parametreista
+
+
+    try {
+        // Tarkista, onko käyttäjä olemassa
+        const checkUserQuery = `SELECT id FROM "user" WHERE id = $1`;
+        const userExists = await pool.query(checkUserQuery, [userId]);
+
+        if (userExists.rowCount === 0) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+
+        // Poista käyttäjä tietokannasta
+        const deleteQuery = `DELETE FROM "user" WHERE id = $1 RETURNING id`;
+        const deleteResult = await pool.query(deleteQuery, [userId]);
+
+        if (deleteResult.rowCount === 0) {
+            res.status(500).json({ message: "Failed to delete user" });
+            return;
+        }
+
+        const deletedUserId = deleteResult.rows[0].id;
+        res.status(200).json({ message: `User with ID ${deletedUserId} deleted successfully` });
+    } catch (error) {
+        console.error(`Error deleting user with ID ${userId}:`, error);
+        res.status(500).json({ message: "Error deleting user", error });
+    }
+};
