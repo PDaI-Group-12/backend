@@ -1,12 +1,22 @@
-
 import { Request, Response } from "express";
 import { pool } from "../database/connection";
 
+
+
+// Get User data and Salary
+
 // Fetch user data along with hourly salary based on user ID
 export const getUserDataAndSalary = async (req: Request, res: Response): Promise<void> => {
-    const { userid } = req.params;  // Destructure userId from request parameters
-
     try {
+        const user = (req as any).user; // Access user info from the middleware
+        const userid = user?.id; // Assuming the token contains the user ID as `id`
+
+        // Validate the extracted userid
+        if (typeof userid !== 'number') {
+            res.status(400).json({ message: "Invalid user ID. Please log in again." });
+            return;
+        }
+
         // SQL query to fetch user data and associated salary
         const userDataQuery = `
             SELECT "user".id, "user".firstname, "user".lastname, "user".role, "user".iban, hour_salary.salary
@@ -42,9 +52,17 @@ export const getUserDataAndSalary = async (req: Request, res: Response): Promise
     }
 };
 
+
+
+//AddHours
+
+
+
 // Add a new user history entry for the specified user
 export const addHours = async (req: Request, res: Response): Promise<void> => {
-    const { userid, hours } = req.body;  // Destructure userid and hours from request body
+    const { hours } = req.body;  // Destructure userid and hours from request body
+    const user = (req as any).user; // Accessing user info from the token
+    const userid = user?.id;
 
     // Validate that hours is a positive number
     if (hours <= 0) {
@@ -68,8 +86,17 @@ export const addHours = async (req: Request, res: Response): Promise<void> => {
     }
 };
 
+
+
+// AddPermanent Salary
+
+
+
+
 export const addPermamentSalary = async (req: Request, res: Response): Promise<void> => {
-    const { userid, salary } = req.body;  // Destructure userid and hours from request body
+    const { salary } = req.body;  // Destructure userid and hours from request body
+    const user = (req as any).user; // Accessing user info from the token
+    const userid = user?.id;
 
     // Validate that hours is a positive number
     if (salary <= 0) {
@@ -93,11 +120,26 @@ export const addPermamentSalary = async (req: Request, res: Response): Promise<v
     }
 };
 
+
+
+
+//GetUserHistory
+
+
+
 // Fetch the user's history (hours worked)
 export const getUserHistory = async (req: Request, res: Response): Promise<void> => {
-    const { userid } = req.params;  // Get userid from request body
 
     try {
+        const user = (req as any).user; // Access user info from the middleware
+        const userid = user?.id; // Assuming the token contains the user ID as `id`
+
+        // Validate the extracted userid
+        if (typeof userid !== 'number') {
+            res.status(400).json({ message: "Invalid user ID. Please log in again." });
+            return;
+        }
+
         // SQL query to get the user's history (worked hours)
         const query = `
             SELECT id, userid, hours
@@ -120,15 +162,29 @@ export const getUserHistory = async (req: Request, res: Response): Promise<void>
     }
 };
 
+
+
+// PaymentRequest
+
+
+
 export const paymentRequest = async (req: Request, res: Response): Promise<void> => {
-    const { userid } = req.params; // Get userid from request parameters
+    try {
+        const user = (req as any).user; // Access user info from the middleware
+        const userid = user?.id; // Assuming the token contains the user ID as `id`
+
+        // Validate the extracted userid
+        if (typeof userid !== 'number') {
+            res.status(400).json({ message: "Invalid user ID. Please log in again." });
+            return;
+        }
 
     if (!userid) {
         res.status(400).json({ message: "Missing userid" });
         return;
     }
 
-    try {
+
         // Query to check how many unpaid hours
         const unpaidHoursQuery = `
             SELECT COALESCE(SUM(hours), 0) AS unpaid_hours
@@ -165,7 +221,7 @@ export const paymentRequest = async (req: Request, res: Response): Promise<void>
 
         // Combine the total hours and unpaid salaries in the response
         res.status(200).json({
-            message: "Unpaid records retrieved successfully",
+            message: "Unpaid salaries retrieved successfully",
             data: {
                 userid,
                 unpaid_hours,
@@ -178,6 +234,10 @@ export const paymentRequest = async (req: Request, res: Response): Promise<void>
         res.status(500).json({ message: "Error retrieving unpaid records", error });
     }
 };
+
+
+// GetAllEmployers
+
 
 
 // Get all employers from the user table
@@ -202,16 +262,30 @@ export const getAllEmployers = async (req: Request, res: Response): Promise<void
     }
 };
 
+//type Role = "user" | "employer"
+
+//PaymentDone
+
+
 export const paymentDone = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const user = (req as any).user; // Access user info from the middleware
+        const userid = user?.id; // Assuming the token contains the user ID as `id`
+
+        // Validate the extracted userid
+        if (typeof userid !== 'number') {
+            res.status(400).json({ message: "Invalid user ID. Please log in again." });
+            return;
+        }
     const { employerId, employeeId } = req.params;
 
-    try {
+
         // 1. Check if employerId is valid and user is employer
         const employerCheckQuery = `SELECT id, role FROM "user" WHERE id = $1 AND role = 'employer'`;
         const employerResult = await pool.query(employerCheckQuery, [employerId]);
 
         if (employerResult.rowCount === 0) {
-            res.status(403).json({ message: "Sorry, you are not authorized to make payment requests" });
+            res.status(403).json({ message: "You are employee" });
             return;
         }
 
@@ -295,8 +369,12 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
         res.status(500).json({ message: "Error processing payment", error });
     }
 };
+
+//Edit user
+
 export const editUser = async (req: Request, res: Response): Promise<void> => {
-    const { userId } = req.params; // Käyttäjän ID reitistä
+    const user = (req as any).user; // Accessing user info from the token
+    const userid = user?.id;
     const { firstname, lastname, role, iban } = req.body; // Päivitettävät tiedot
 
     try {
@@ -317,14 +395,14 @@ export const editUser = async (req: Request, res: Response): Promise<void> => {
             WHERE id = $5
             RETURNING id, firstname, lastname, role, iban
         `;
-        const values = [firstname, lastname, role, iban, userId];
+        const values = [firstname, lastname, role, iban, userid];
 
         // Suoritetaan kysely
         const result = await pool.query(query, values);
 
         // Tarkista löytyikö käyttäjä
         if (result.rowCount === 0) {
-            res.status(404).json({ message: `User with ID ${userId} not found` });
+            res.status(404).json({ message: `User with ID not found` });
             return;
         }
 
@@ -339,14 +417,19 @@ export const editUser = async (req: Request, res: Response): Promise<void> => {
     }
 };
 
+
+// Deleteuser
+
+
 export const deleteUser = async (req: Request, res: Response): Promise<void> => {
-    const { userId } = req.params; // Poimitaan käyttäjän id pyynnön parametreista
+    const user = (req as any).user; // Accessing user info from the token
+    const userid = user?.id;
 
 
     try {
         // Tarkista, onko käyttäjä olemassa
         const checkUserQuery = `SELECT id FROM "user" WHERE id = $1`;
-        const userExists = await pool.query(checkUserQuery, [userId]);
+        const userExists = await pool.query(checkUserQuery,[userid]);
 
         if (userExists.rowCount === 0) {
             res.status(404).json({ message: "User not found" });
@@ -355,17 +438,17 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
 
         // Poista käyttäjä tietokannasta
         const deleteQuery = `DELETE FROM "user" WHERE id = $1 RETURNING id`;
-        const deleteResult = await pool.query(deleteQuery, [userId]);
+        const deleteResult = await pool.query(deleteQuery,[userid]);
 
         if (deleteResult.rowCount === 0) {
-            res.status(500).json({ message: "Failed to delete user" });
+            res.status(500).json({ message: `Failed to delete ${userid} user` });
             return;
         }
 
         const deletedUserId = deleteResult.rows[0].id;
         res.status(200).json({ message: `User with ID ${deletedUserId} deleted successfully` });
     } catch (error) {
-        console.error(`Error deleting user with ID ${userId}:`, error);
+        console.error(`Error deleting user with ID :`, error);
         res.status(500).json({ message: "Error deleting user", error });
     }
 };
