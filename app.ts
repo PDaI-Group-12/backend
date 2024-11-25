@@ -9,7 +9,7 @@ import { authRouter } from "./routes/auth";
 import { pool } from "./database/connection";
 import { userRouter } from "./routes/user";
 import { salaryRouter } from "./routes/salary";
-import { testRouter } from "./routes/test";
+
 
 export const app = express();
 
@@ -27,7 +27,7 @@ app.use('/users', usersRouter);
 app.use('/auth', authRouter);
 app.use('/user', userRouter);
 app.use('/salary', salaryRouter);
-app.use('/test', testRouter);
+
 
 // Database connection and server start
 app.listen(3000, () => {
