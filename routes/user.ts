@@ -8,9 +8,9 @@ export const userRouter = express.Router();
 userRouter.get('/employers', authenticateToken, getAllEmployers);  // Fixed
 userRouter.post('/:id/hours', authenticateToken, addHours);  //Fixed
 userRouter.post('/addpermanentsalary', authenticateToken, addPermamentSalary); //Fixed
-userRouter.get('/history', authenticateToken, getUserHistory);  //tried, hard
+userRouter.get('/history', authenticateToken, getUserHistory);  // Fixed
 userRouter.get('/paymentrequest', authenticateToken, paymentRequest); //Fixed
-userRouter.get('/paymentdone/:employeeId', authenticateToken, paymentDone)  // Fixed
+userRouter.get('/paymentdone/:employeeId/:employerId', authenticateToken, paymentDone)  // Fixed still to be encanhed
 userRouter.get('/getuserdata', authenticateToken, getUserDataAndSalary);  //Fixed
 userRouter.put('/edituser', authenticateToken, editUser);  // Fixed
 userRouter.delete('/deleteuser', authenticateToken, deleteUser); // Fixed
