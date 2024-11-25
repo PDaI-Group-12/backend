@@ -3,8 +3,9 @@ import { pool } from "../database/connection";
 
 // Function to post data to the hour_salary table
 export const setHourSalary = async (req: Request, res: Response): Promise<void> => {
-    const { userid, salary } = req.body;
+    const { salary } = req.body;
     const user = (req as any).user; // Accessing user info from the token
+    const userid = user?.id;
 
     // Basic input validation
     if (typeof userid !== 'number' || typeof salary !== 'number') {
@@ -24,10 +25,16 @@ export const setHourSalary = async (req: Request, res: Response): Promise<void> 
 };
 
 export const getUnpaid = async (req: Request, res: Response): Promise<void> => {
-    console.log("request body", req.params);
-    const {userid} = req.params;  // Get userid from request body
-
     try {
+        const user = (req as any).user; // Access user info from the middleware
+        const userid = user?.id; // Assuming the token contains the user ID as `id`
+
+        // Validate the extracted userid
+        if (typeof userid !== 'number') {
+            res.status(400).json({ message: "Invalid user ID. Please log in again." });
+            return;
+        }
+
         // SQL query
         const query = `
             SELECT hour_salary.userid      AS hour_userid,
@@ -47,13 +54,11 @@ export const getUnpaid = async (req: Request, res: Response): Promise<void> => {
                      LEFT JOIN
                  hour_salary ON permanent_salary.userid = hour_salary.userid
             WHERE permanent_salary.userid = $1
-
         `;
-        const result = await pool.query(query, [Number(userid)]);  // Execute query
-
+        const result = await pool.query(query, [userid]); // Execute query with extracted userid
 
         if (result.rowCount === 0) {
-            res.status(404).json({message: "No unpaid salaries found for this user"});
+            res.status(404).json({ message: "No unpaid salaries found for this user" });
             return;
         }
 
@@ -89,6 +94,6 @@ export const getUnpaid = async (req: Request, res: Response): Promise<void> => {
         res.json(response);
     } catch (error) {
         console.error("Error fetching user history:", error);
-        res.status(500).json({message: "Error fetching user history", error});
+        res.status(500).json({ message: "Error fetching user history", error });
     }
 };

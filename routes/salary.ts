@@ -7,7 +7,7 @@ export const salaryRouter = express.Router();
 
 // POST endpoint to create an entry in hour_salary
 salaryRouter.post('/', authenticateToken, setHourSalary);
-salaryRouter.get('/:userid/getUnpaid', authenticateToken, getUnpaid)
+salaryRouter.get('/getUnpaid', authenticateToken, getUnpaid)
 
 
 /*import express from "express";
