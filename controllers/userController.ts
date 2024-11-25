@@ -120,9 +120,8 @@ export const getUserHistory = async (req: Request, res: Response): Promise<void>
     }
 };
 
-// Process a payment request based on total hours worked and remaining hours
 export const paymentRequest = async (req: Request, res: Response): Promise<void> => {
-    const { userid } = req.params;  // Get userid from request parameters
+    const { userid } = req.params; // Get userid from request parameters
 
     if (!userid) {
         res.status(400).json({ message: "Missing userid" });
@@ -130,60 +129,56 @@ export const paymentRequest = async (req: Request, res: Response): Promise<void>
     }
 
     try {
-        // Query to get total hours worked by the user from history
-        const totalHoursQuery = `
-            SELECT SUM(hours) AS total_hours
-            FROM history
-            WHERE userid = $1
-            GROUP BY userid;
-        `;
-        const totalHoursResult = await pool.query(totalHoursQuery, [userid]);
-
-        // If no history found for the user, return 404 error
-        if (totalHoursResult.rowCount === 0) {
-            res.status(404).json({ message: "No hours found for the user" });
-            return;
-        }
-
-        const total_hours = totalHoursResult.rows[0].total_hours;  // Total hours worked
-
-        // Query to check how many hours have already been requested for payment
-        const requestedHoursQuery = `
-            SELECT COALESCE(SUM(hours), 0) AS requested_hours
+        // Query to check how many unpaid hours
+        const unpaidHoursQuery = `
+            SELECT COALESCE(SUM(hours), 0) AS unpaid_hours
             FROM request
             WHERE userid = $1
             GROUP BY userid;
         `;
-        const requestedHoursResult = await pool.query(requestedHoursQuery, [userid]);
+        const unpaidHoursResult = await pool.query(unpaidHoursQuery, [userid]);
+        const unpaid_hours = unpaidHoursResult.rows[0]?.unpaid_hours ?? 0; // Total requested hours (default to 0 if not found)
 
-        const requested_hours = requestedHoursResult.rows[0]?.requested_hours ?? 0;  // Total requested hours (default to 0 if not found)
+        const hourSalaryQuery = `
+            SELECT COALESCE(SUM(salary), 0) AS hourlySalary
+            FROM hour_salary
+            WHERE userid = $1
+        `;
 
-        // Calculate remaining hours that can be requested
-        const remaining_hours = total_hours - requested_hours;
+        const hourlySalaryResult = await pool.query(hourSalaryQuery, [userid]);
 
-        if (remaining_hours <= 0) {
-            res.status(400).json({ message: "No remaining hours to request" });
+        const hourlySalary = hourlySalaryResult.rows[0]?.hourlysalary ?? 0;
+
+        // Query to check for unpaid salaries in the permanent_salary table
+        const unpaidPermanentSalaryQuery = `
+            SELECT COALESCE(SUM(salary), 0) AS unpaid_permanent_salaries
+            FROM permanent_salary
+            WHERE userid = $1;
+        `;
+        const unpaidPermanentSalaryResult = await pool.query(unpaidPermanentSalaryQuery, [userid]);
+        const unpaid_permanent_salaries = unpaidPermanentSalaryResult.rows[0]?.unpaid_permanent_salaries ?? 0; // Total unpaid salaries (default to 0 if not found)
+
+        if (unpaid_hours <= 0 && hourlySalary<=0 && unpaid_permanent_salaries <= 0) {
+            res.status(400).json({ message: "No unpaid hours or hourlysalaries or permanent salaries to request" });
             return;
         }
 
-        // Insert the remaining hours as a new request entry in the database
-        const insertQuery = `
-            INSERT INTO request (userid, hours)
-            VALUES ($1, $2)
-            RETURNING userid, hours;
-        `;
-        const insertResult = await pool.query(insertQuery, [userid, remaining_hours]);
-
-        // Return the payment request record
-        res.status(201).json({
-            message: "Payment request added successfully",
-            request: insertResult.rows[0]
+        // Combine the total hours and unpaid salaries in the response
+        res.status(200).json({
+            message: "Unpaid records retrieved successfully",
+            data: {
+                userid,
+                unpaid_hours,
+                hourlySalary,
+                unpaid_permanent_salaries
+            }
         });
     } catch (error) {
-        console.error("Error adding payment request:", error);
-        res.status(500).json({ message: "Error adding payment request", error });
+        console.error("Error retrieving unpaid records:", error);
+        res.status(500).json({ message: "Error retrieving unpaid records", error });
     }
 };
+
 
 // Get all employers from the user table
 export const getAllEmployers = async (req: Request, res: Response): Promise<void> => {
@@ -298,5 +293,79 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
         await pool.query("ROLLBACK"); // Rollback transaction in case of error
         console.error("Error processing payment:", error);
         res.status(500).json({ message: "Error processing payment", error });
+    }
+};
+export const editUser = async (req: Request, res: Response): Promise<void> => {
+    const { userId } = req.params; // Käyttäjän ID reitistä
+    const { firstname, lastname, role, iban } = req.body; // Päivitettävät tiedot
+
+    try {
+        // Tarkista, että päivitettäviä kenttiä on annettu
+        if (!firstname && !lastname && !role && !iban) {
+            res.status(400).json({ message: "No fields provided for update" });
+            return;
+        }
+
+        // Päivityskysely, joka käyttää COALESCE asettamaan vain annetut arvot
+        const query = `
+            UPDATE "user"
+            SET
+                firstname = COALESCE($1, firstname),
+                lastname = COALESCE($2, lastname),
+                role = COALESCE($3, role),
+                iban = COALESCE($4, iban)
+            WHERE id = $5
+            RETURNING id, firstname, lastname, role, iban
+        `;
+        const values = [firstname, lastname, role, iban, userId];
+
+        // Suoritetaan kysely
+        const result = await pool.query(query, values);
+
+        // Tarkista löytyikö käyttäjä
+        if (result.rowCount === 0) {
+            res.status(404).json({ message: `User with ID ${userId} not found` });
+            return;
+        }
+
+        // Palauta päivitetyt tiedot
+        res.status(200).json({
+            message: "User updated successfully",
+            user: result.rows[0],
+        });
+    } catch (error) {
+        console.error("Error updating user:", error);
+        res.status(500).json({ message: "Error updating user", error });
+    }
+};
+
+export const deleteUser = async (req: Request, res: Response): Promise<void> => {
+    const { userId } = req.params; // Poimitaan käyttäjän id pyynnön parametreista
+
+
+    try {
+        // Tarkista, onko käyttäjä olemassa
+        const checkUserQuery = `SELECT id FROM "user" WHERE id = $1`;
+        const userExists = await pool.query(checkUserQuery, [userId]);
+
+        if (userExists.rowCount === 0) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+
+        // Poista käyttäjä tietokannasta
+        const deleteQuery = `DELETE FROM "user" WHERE id = $1 RETURNING id`;
+        const deleteResult = await pool.query(deleteQuery, [userId]);
+
+        if (deleteResult.rowCount === 0) {
+            res.status(500).json({ message: "Failed to delete user" });
+            return;
+        }
+
+        const deletedUserId = deleteResult.rows[0].id;
+        res.status(200).json({ message: `User with ID ${deletedUserId} deleted successfully` });
+    } catch (error) {
+        console.error(`Error deleting user with ID ${userId}:`, error);
+        res.status(500).json({ message: "Error deleting user", error });
     }
 };
