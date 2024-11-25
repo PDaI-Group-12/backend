@@ -3,12 +3,10 @@ import path from "path";
 import cookieParser from "cookie-parser";
 import logger from "morgan";
 import cors from "cors";
-import { indexRouter } from "./routes";
-import { usersRouter } from "./routes/users";
 import { authRouter } from "./routes/auth";
 import { pool } from "./database/connection";
 import { userRouter } from "./routes/user";
-import { salaryRouter } from "./routes/salary";
+
 
 
 export const app = express();
@@ -21,12 +19,11 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cors());
 
+
 // Routes
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
 app.use('/auth', authRouter);
 app.use('/user', userRouter);
-app.use('/salary', salaryRouter);
+
 
 
 // Database connection and server start
