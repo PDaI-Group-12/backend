@@ -284,10 +284,7 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
         const employerCheckQuery = `SELECT id, role FROM "user" WHERE id = $1 AND role = 'employer'`;
         const employerResult = await pool.query(employerCheckQuery, [employerId]);
 
-        if (employerResult.rowCount === 0) {
-            res.status(403).json({ message: "You are employee" });
-            return;
-        }
+
 
         // 2. Check if employee has unpaid salaries
         const salaryCheckQuery = `
@@ -375,16 +372,14 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
 export const editUser = async (req: Request, res: Response): Promise<void> => {
     const user = (req as any).user; // Accessing user info from the token
     const userid = user?.id;
-    const { firstname, lastname, role, iban } = req.body; // Päivitettävät tiedot
+    const { firstname, lastname, role, iban } = req.body;
 
     try {
-        // Tarkista, että päivitettäviä kenttiä on annettu
         if (!firstname && !lastname && !role && !iban) {
-            res.status(400).json({ message: "No fields provided for update" });
+            res.status(400).json({ message: "No all required fields provided for update" });
             return;
         }
 
-        // Päivityskysely, joka käyttää COALESCE asettamaan vain annetut arvot
         const query = `
             UPDATE "user"
             SET
@@ -394,19 +389,16 @@ export const editUser = async (req: Request, res: Response): Promise<void> => {
                 iban = COALESCE($4, iban)
             WHERE id = $5
             RETURNING id, firstname, lastname, role, iban
-        `;
+            `;
         const values = [firstname, lastname, role, iban, userid];
 
-        // Suoritetaan kysely
         const result = await pool.query(query, values);
 
-        // Tarkista löytyikö käyttäjä
         if (result.rowCount === 0) {
             res.status(404).json({ message: `User with ID not found` });
             return;
         }
 
-        // Palauta päivitetyt tiedot
         res.status(200).json({
             message: "User updated successfully",
             user: result.rows[0],
@@ -417,39 +409,55 @@ export const editUser = async (req: Request, res: Response): Promise<void> => {
     }
 };
 
-
 // Deleteuser
-
 
 export const deleteUser = async (req: Request, res: Response): Promise<void> => {
     const user = (req as any).user; // Accessing user info from the token
     const userid = user?.id;
 
-
     try {
-        // Tarkista, onko käyttäjä olemassa
-        const checkUserQuery = `SELECT id FROM "user" WHERE id = $1`;
-        const userExists = await pool.query(checkUserQuery,[userid]);
+        const checkUserQuery = `
+            SELECT id FROM "user" 
+            WHERE id = $1
+        `;
+        const userExists = await pool.query(checkUserQuery, [userid]);
 
         if (userExists.rowCount === 0) {
             res.status(404).json({ message: "User not found" });
             return;
         }
 
-        // Poista käyttäjä tietokannasta
-        const deleteQuery = `DELETE FROM "user" WHERE id = $1 RETURNING id`;
-        const deleteResult = await pool.query(deleteQuery,[userid]);
+        const deleteHourSalaryQuery = `
+            DELETE FROM hour_salary 
+            WHERE userid = $1
+            `;
+        await pool.query(deleteHourSalaryQuery, [userid]);
+
+        const deletePermanentSalaryQuery = `
+            DELETE FROM permanent_salary 
+            WHERE userid = $1
+            `;
+        await pool.query(deletePermanentSalaryQuery, [userid]);
+
+        const deleteQuery = `
+            DELETE FROM "user" 
+            WHERE id = $1 
+            RETURNING id
+            `;
+        const deleteResult = await pool.query(deleteQuery, [userid]);
 
         if (deleteResult.rowCount === 0) {
-            res.status(500).json({ message: `Failed to delete ${userid} user` });
+            res.status(500).json({ message: `Failed to delete user with ID ${userid}` });
             return;
         }
 
         const deletedUserId = deleteResult.rows[0].id;
-        res.status(200).json({ message: `User with ID ${deletedUserId} deleted successfully` });
+        res.status(200).json({
+            message: `User with ID ${deletedUserId} and their associated data deleted successfully`,
+        });
     } catch (error) {
-        console.error(`Error deleting user with ID :`, error);
-        res.status(500).json({ message: "Error deleting user", error });
+        console.error(`Error deleting user with ID ${userid}:`, error);
+        res.status(500).json({ message: "Error deleting user and associated data", error });
     }
 };
 
@@ -553,5 +561,59 @@ export const getUnpaid = async (req: Request, res: Response): Promise<void> => {
     } catch (error) {
         console.error("Error fetching user history:", error);
         res.status(500).json({ message: "Error fetching user history", error });
+    }
+};
+
+export const editHoursalary = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const user = (req as any).user;
+        const userId = user?.id;
+        const { employeeId } = req.params;
+        const { newSalary } = req.body;
+
+        if (!userId || !employeeId || newSalary == null) {
+            res.status(400).json({ message: "Missing required information." });
+            return;
+        }
+
+        const employerCheckQuery = `
+            SELECT role FROM "user" 
+            WHERE id = $1 AND role = 'employer'
+            `;
+        const employerCheckResult = await pool.query(employerCheckQuery, [userId]);
+
+        if (employerCheckResult.rowCount === 0) {
+            res.status(403).json({ message: "Only employers can update hourly salaries." });
+            return;
+        }
+
+        const employeeCheckQuery = `
+            SELECT id FROM "user" 
+            WHERE id = $1
+            `;
+        const employeeCheckResult = await pool.query(employeeCheckQuery, [employeeId]);
+
+        if (employeeCheckResult.rowCount === 0) {
+            res.status(404).json({ message: "Employee not found." });
+            return;
+        }
+
+        const updateSalaryQuery = `
+            UPDATE hour_salary
+            SET salary = $1
+            WHERE userid = $2
+        `;
+        await pool.query(updateSalaryQuery, [newSalary, employeeId]);
+
+        res.status(200).json({
+            message: "Hourly salary updated successfully.",
+            data: {
+                employeeId,
+                newSalary,
+            },
+        });
+    } catch (error) {
+        console.error("Error updating hourly salary:", error);
+        res.status(500).json({ message: "Internal server error.", error });
     }
 };
