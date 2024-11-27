@@ -5,7 +5,7 @@ import {authenticateToken} from "../middleware/authMiddleware";
 export const userRouter = express.Router();
 
 userRouter.get('/employers', authenticateToken, getAllEmployers);
-userRouter.get('/listhistory', authenticateToken, getUserHistory);
-userRouter.get('/getuserdata', authenticateToken, getUserDataAndSalary);
-userRouter.put('/edituser', authenticateToken, editUser);
-userRouter.delete('/:id/deleteuser', authenticateToken, deleteUser);
+userRouter.get('/history', authenticateToken, getUserHistory);
+userRouter.get('/', authenticateToken, getUserDataAndSalary);
+userRouter.put('/', authenticateToken, editUser);
+userRouter.delete('/', authenticateToken, deleteUser);
