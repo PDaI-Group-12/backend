@@ -1,20 +1,11 @@
 import express from "express";
-import { getAllEmployers,getUserDataAndSalary, addHours,addPermamentSalary, getUserHistory, paymentRequest,paymentDone,editUser,deleteUser, setHourSalary, getUnpaid,editHoursalary} from "../controllers/userController";
+import { getAllEmployers,getUserDataAndSalary, getUserHistory,editUser,deleteUser} from "../controllers/userController";
 import {authenticateToken} from "../middleware/authMiddleware";
-
 
 export const userRouter = express.Router();
 
-userRouter.get('/employers', authenticateToken, getAllEmployers);  // Fixed
-userRouter.post('/:id/hours', authenticateToken, addHours);  //Fixed
-userRouter.post('/addpermanentsalary', authenticateToken, addPermamentSalary); //Fixed
-userRouter.get('/listhistory', authenticateToken, getUserHistory);  // Fixed
-userRouter.get('/paymentrequest', authenticateToken, paymentRequest); //Fixed
-userRouter.get('/paymentdone/:employeeId/:employerId', authenticateToken, paymentDone)  // Fixed still to be encanhed
-userRouter.get('/getuserdata', authenticateToken, getUserDataAndSalary);  //Fixed
-userRouter.put('/edituser', authenticateToken, editUser);  // Fixed
-userRouter.delete('/:id/deleteuser', authenticateToken, deleteUser); // Fixed
-userRouter.post('/setHourSalary', authenticateToken, setHourSalary); //Fixed
-userRouter.get('/getUnpaid', authenticateToken, getUnpaid) //Fixed
-userRouter.put('/edithoursalary/:employeeId',authenticateToken,editHoursalary);
-
+userRouter.get('/employers', authenticateToken, getAllEmployers);
+userRouter.get('/listhistory', authenticateToken, getUserHistory);
+userRouter.get('/getuserdata', authenticateToken, getUserDataAndSalary);
+userRouter.put('/edituser', authenticateToken, editUser);
+userRouter.delete('/:id/deleteuser', authenticateToken, deleteUser);
