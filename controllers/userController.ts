@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { pool } from "../database/connection";
+import {AuthenticatedRequest, EditUserRequestBody} from "../types";
 
 /*
 List of functions:
@@ -13,7 +14,7 @@ List of functions:
 
 // getUserDataAndSalary - fetch user data along with hourly salary based on user ID
 
-export const getUserDataAndSalary = async (req: Request, res: Response): Promise<void> => {
+export const getUserDataAndSalary = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
         const user = (req as any).user; // Access user info from the middleware
         const userid = user?.id; // Assuming the token contains the user ID as `id`
@@ -134,10 +135,10 @@ export const getAllEmployers = async (req: Request, res: Response): Promise<void
 
 // Edit user
 
-export const editUser = async (req: Request, res: Response): Promise<void> => {
+export const editUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const user = (req as any).user; // Accessing user info from the token
     const userid = user?.id;
-    const { firstname, lastname, role, iban } = req.body;
+    const { firstname, lastname, role, iban }: EditUserRequestBody = req.body;
 
     try {
         if (!firstname && !lastname && !role && !iban) {

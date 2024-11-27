@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { pool } from "../database/connection";
+import { AuthenticatedRequest} from "../types";
 
 /* List of functions:
 - addhours
@@ -13,7 +14,7 @@ import { pool } from "../database/connection";
 
 // addhours
 
-export const addHours = async (req: Request, res: Response): Promise<void> => {
+export const addHours = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const { hours } = req.body;  // Destructure userid and hours from request body
     const user = (req as any).user; // Accessing user info from the token
     const userid = user?.id;
