@@ -58,7 +58,6 @@ export const getUserDataAndSalary = async (req: Request, res: Response): Promise
 
 
 
-// Add a new user history entry for the specified user
 export const addHours = async (req: Request, res: Response): Promise<void> => {
     const { hours } = req.body;  // Destructure userid and hours from request body
     const user = (req as any).user; // Accessing user info from the token
@@ -81,8 +80,8 @@ export const addHours = async (req: Request, res: Response): Promise<void> => {
 
         res.status(201).json({ message: "Hours added successfully", entry: result.rows[0] });
     } catch (error) {
-        console.error("Error adding user history:", error);
-        res.status(500).json({ message: "Error adding user history", error });
+        console.error("Error adding hours:", error);
+        res.status(500).json({ message: "Error adding hours", error });
     }
 };
 
@@ -121,15 +120,9 @@ export const addPermamentSalary = async (req: Request, res: Response): Promise<v
 };
 
 
+//GetUserHistory - fetch the user's history (sum of hours worked and permanent salaries)
 
-
-//GetUserHistory
-
-
-
-// Fetch the user's history (hours worked)
 export const getUserHistory = async (req: Request, res: Response): Promise<void> => {
-
     try {
         const user = (req as any).user; // Access user info from the middleware
         const userid = user?.id; // Assuming the token contains the user ID as `id`
@@ -142,11 +135,11 @@ export const getUserHistory = async (req: Request, res: Response): Promise<void>
 
         // SQL query to get the user's history (worked hours)
         const query = `
-            SELECT id, userid, hours
+            SELECT COALESCE(SUM(hours), 0) AS totalhours, COALESCE(SUM(permanent), 0) AS permanentsalary
             FROM history
             WHERE userid = $1
-        `;
-        const result = await pool.query(query, [userid]);  // Execute query to fetch history
+            `;
+        const result = await pool.query(query, [userid]); // Execute query to fetch history
 
         // If no history is found, return 404 error
         if (result.rowCount === 0) {
@@ -154,19 +147,25 @@ export const getUserHistory = async (req: Request, res: Response): Promise<void>
             return;
         }
 
+        // Extract totals from query result
+        const { totalhours, permanentsalary } = result.rows[0];
+
         // Return the user's history in the response
-        res.json({ history: result.rows });
+        res.status(200).json({
+            message: "History retrieved successfully",
+            data: {
+                userid,
+                totalhours,
+                permanentsalary,
+            },
+        });
     } catch (error) {
         console.error("Error fetching user history:", error);
         res.status(500).json({ message: "Error fetching user history", error });
     }
 };
 
-
-
 // PaymentRequest
-
-
 
 export const paymentRequest = async (req: Request, res: Response): Promise<void> => {
     try {
