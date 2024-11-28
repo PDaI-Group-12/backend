@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import nodemailer from 'nodemailer';
 import { pool } from "../database/connection";
 
 /* List of functions:
@@ -12,6 +13,15 @@ import { pool } from "../database/connection";
 */
 
 // addhours
+
+// Configure Nodemailer transporter
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD
+    }
+});
 
 export const addHours = async (req: Request, res: Response): Promise<void> => {
     const { hours } = req.body;  // Destructure userid and hours from request body
@@ -118,9 +128,39 @@ export const paymentRequest = async (req: Request, res: Response): Promise<void>
         const unpaidPermanentSalaryResult = await pool.query(unpaidPermanentSalaryQuery, [userid]);
         const unpaid_permanent_salaries = unpaidPermanentSalaryResult.rows[0]?.unpaid_permanent_salaries ?? 0; // Total unpaid salaries (default to 0 if not found)
 
-        if (unpaid_hours <= 0 && hourlySalary<=0 && unpaid_permanent_salaries <= 0) {
-            res.status(400).json({ message: "No unpaid hours or hourlysalaries or permanent salaries to request" });
+        if (unpaid_hours <= 0 && unpaid_permanent_salaries <= 0) {
+            res.status(400).json({ message: "No unpaid salaries to request" });
             return;
+        }
+
+        // Calculate total salary
+        const totalSalary = (unpaid_hours * hourlySalary) + unpaid_permanent_salaries;
+
+        // Send email notification
+        try {
+            await transporter.sendMail({
+                from: process.env.GMAIL_USER,
+                to: process.env.GMAIL_USER, // user.email, Assuming user object has an email field
+                subject: 'Salary Payment Request Submitted',
+                html: `
+                    <h2>Salary Payment Request</h2>
+                    <p>Dear ${user.firstname || 'User'},</p>
+                    <p>You have submitted a payment request with the following details:</p>
+                    <ul>
+                        <li>User ID: ${userid}</li>
+                        <li>Unpaid Hours: ${unpaid_hours}</li>
+                        <li>Hourly Salary Rate: ${hourlySalary}</li>
+                        <li>Unpaid Permanent Salaries: ${unpaid_permanent_salaries}</li>
+                        <li>Total salary: ${totalSalary}</li>
+                    </ul>
+                    <p>Your salary request is being processed.</p>
+                    <br/>
+                    <small>This is an automated email. Please do not reply.</small>
+                `
+            });
+        } catch (emailError) {
+            console.error("Email sending failed:", emailError);
+            // Non-critical error, so we'll still return the payment request response
         }
 
         // Combine the total hours and unpaid salaries in the response
@@ -130,7 +170,9 @@ export const paymentRequest = async (req: Request, res: Response): Promise<void>
                 userid,
                 unpaid_hours,
                 hourlySalary,
-                unpaid_permanent_salaries
+                unpaid_permanent_salaries,
+                totalSalary
+
             }
         });
     } catch (error) {
@@ -197,7 +239,6 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
             `;
         const permanentSalaryResult = await pool.query(permanentSalaryQuery, [employeeId]);
         const permanentSalary = permanentSalaryResult.rows[0]?.permanentsalary || 0;
-        console.log('Permanent Salary Query Result:', permanentSalaryResult.rows);
 
         // 6. Calculate total salary
         const totalSalary = (totalHours * hourlySalary) + permanentSalary;
@@ -228,16 +269,41 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
 
         await pool.query("COMMIT"); // Commit the transaction
 
+        // Send email notification
+        try {
+            await transporter.sendMail({
+                from: process.env.GMAIL_USER,
+                 to: process.env.GMAIL_USER,
+                subject: 'Salary Payment Done',
+                html: `
+                    <h2>Salary Payment</h2>
+                    <p>Dear ${user?.firstname || 'User'},</p>
+                    <p>Your payment has been processed:</p>
+                    <ul>
+                        <li>Employee ID: ${employeeId}</li>
+                        <li>Total Hours: ${totalHours}</li>
+                        <li>Hourly Salary Rate: ${hourlySalary}</li>
+                        <li>Permanent Salary: ${permanentSalary}</li>
+                        <li>Total Salary: ${totalSalary}</li>
+                    </ul>
+                    <p>Your salary is being paid.</p>
+                    <br/>
+                    <small>This is an automated email. Please do not reply.</small>
+                `
+            });
+        } catch (emailError) {
+            console.error("Error sending email:", emailError);
+        }
+
         // 9. Send response
         res.status(200).json({
             employeeId: employeeId,
             totalHours: totalHours,
             hourlySalary: hourlySalary,
             permanentSalary: permanentSalary,
-            totalSalary: totalSalary.toFixed(2),
+            totalSalary,
             message: "Payment processed and paid salaries moved to history successfully",
         });
-
     } catch (error) {
         await pool.query("ROLLBACK"); // Rollback transaction in case of error
         console.error("Error processing payment:", error);
