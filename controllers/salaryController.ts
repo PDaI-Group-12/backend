@@ -15,6 +15,15 @@ import { AuthenticatedRequest} from "../types";
 
 // addhours
 
+// Configure Nodemailer transporter
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD
+    }
+});
+
 export const addHours = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
 // Configure Nodemailer transporter
 const transporter = nodemailer.createTransport({
@@ -241,6 +250,7 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
             `;
         const permanentSalaryResult = await pool.query(permanentSalaryQuery, [employeeId]);
         const permanentSalary = permanentSalaryResult.rows[0]?.permanentsalary || 0;
+        console.log('Permanent Salary Query Result:', permanentSalaryResult.rows);
 
         // 6. Calculate total salary
         const totalSalary = (totalHours * hourlySalary) + permanentSalary;
@@ -303,9 +313,10 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
             totalHours: totalHours,
             hourlySalary: hourlySalary,
             permanentSalary: permanentSalary,
-            totalSalary,
+            totalSalary: totalSalary.toFixed(2),
             message: "Payment processed and paid salaries moved to history successfully",
         });
+
     } catch (error) {
         await pool.query("ROLLBACK"); // Rollback transaction in case of error
         console.error("Error processing payment:", error);
