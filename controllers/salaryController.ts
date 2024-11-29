@@ -397,7 +397,7 @@ export const editHoursalary = async (req: Request, res: Response): Promise<void>
 };
 
 
-// GetUnpaid --- tämä osa koodia ei toimi oikein. Maksamattomat työtunnit löytyvät request taulusta. Vertaa paymentRequest!
+// GetUnpaid
 
 export const getUnpaid = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -410,65 +410,62 @@ export const getUnpaid = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        // SQL query
-        const query = `
-            SELECT hour_salary.userid      AS hour_userid,
-                   hour_salary.salary      AS hour_salary,
-                   permanent_salary.userid AS permanent_userid,
-                   permanent_salary.salary AS permanent_salary
-            FROM hour_salary
-                     LEFT JOIN
-                 permanent_salary ON hour_salary.userid = permanent_salary.userid
-            WHERE hour_salary.userid = $1
-            UNION
-            SELECT permanent_salary.userid AS hour_userid,
-                   NULL                    AS hour_salary,
-                   permanent_salary.userid AS permanent_userid,
-                   permanent_salary.salary AS permanent_salary
-            FROM permanent_salary
-                     LEFT JOIN
-                 hour_salary ON permanent_salary.userid = hour_salary.userid
-            WHERE permanent_salary.userid = $1
-        `;
-        const result = await pool.query(query, [userid]); // Execute query with extracted userid
-
-        if (result.rowCount === 0) {
-            res.status(404).json({ message: "No unpaid salaries found for this user" });
+        if (!userid) {
+            res.status(400).json({ message: "Missing userid" });
             return;
         }
 
-        // Prepare response to simplify and make it more readable
-        const response: any = {
-            hour_salary: [],
-            permanent_salary: []
-        };
+        // Query to check how many unpaid hours
+        const unpaidHoursQuery = `
+            SELECT COALESCE(SUM(hours), 0) AS unpaid_hours
+            FROM request
+            WHERE userid = $1
+            GROUP BY userid;
+        `;
+        const unpaidHoursResult = await pool.query(unpaidHoursQuery, [userid]);
+        const unpaid_hours = unpaidHoursResult.rows[0]?.unpaid_hours ?? 0; // Total requested hours (default to 0 if not found)
 
-        result.rows.forEach(row => {
-            // Add to hour_salary if it exists
-            if (row.hour_salary !== null) {
-                response.hour_salary.push({
-                    userid: row.hour_userid,
-                    salary: row.hour_salary
-                });
-            }
+        const hourSalaryQuery = `
+            SELECT COALESCE(SUM(salary), 0) AS hourlySalary
+            FROM hour_salary
+            WHERE userid = $1
+        `;
 
-            // Add to permanent_salary if it exists
-            if (row.permanent_salary !== null) {
-                response.permanent_salary.push({
-                    userid: row.permanent_userid,
-                    salary: row.permanent_salary
-                });
+        const hourlySalaryResult = await pool.query(hourSalaryQuery, [userid]);
+
+        const hourlySalary = hourlySalaryResult.rows[0]?.hourlysalary ?? 0;
+
+        // Query to check for unpaid salaries in the permanent_salary table
+        const unpaidPermanentSalaryQuery = `
+            SELECT COALESCE(SUM(salary), 0) AS unpaid_permanent_salaries
+            FROM permanent_salary
+            WHERE userid = $1;
+        `;
+        const unpaidPermanentSalaryResult = await pool.query(unpaidPermanentSalaryQuery, [userid]);
+        const unpaid_permanent_salaries = unpaidPermanentSalaryResult.rows[0]?.unpaid_permanent_salaries ?? 0; // Total unpaid salaries (default to 0 if not found)
+
+        if (unpaid_hours <= 0 && unpaid_permanent_salaries <= 0) {
+            res.status(400).json({ message: "No unpaid salaries to request" });
+            return;
+        }
+
+        // Calculate total salary
+        const totalSalary = (unpaid_hours * hourlySalary) + unpaid_permanent_salaries;
+
+        // Combine the total hours and unpaid salaries in the response
+        res.status(200).json({
+            message: "Unpaid salaries retrieved successfully",
+            data: {
+                userid,
+                unpaid_hours,
+                hourlySalary,
+                unpaid_permanent_salaries,
+                totalSalary
+
             }
         });
-
-        // Remove empty arrays from the response
-        if (response.hour_salary.length === 0) delete response.hour_salary;
-        if (response.permanent_salary.length === 0) delete response.permanent_salary;
-
-        // Return simplified salary response
-        res.json(response);
     } catch (error) {
-        console.error("Error fetching user history:", error);
-        res.status(500).json({ message: "Error fetching user history", error });
+        console.error("Error retrieving unpaid records:", error);
+        res.status(500).json({ message: "Error retrieving unpaid records", error });
     }
 };
