@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import nodemailer from 'nodemailer';
 import { pool } from "../database/connection";
-import { AuthenticatedRequest} from "../types";
 
 /* List of functions:
 - addhours
@@ -26,7 +25,7 @@ const transporter = nodemailer.createTransport({
 });
 
 
-export const addHours = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+export const addHours = async (req: Request, res: Response): Promise<void> => {
     const { hours } = req.body;  // Destructure userid and hours from request body
     const user = (req as any).user; // Accessing user info from the token
     const userid = user?.id;
@@ -242,7 +241,6 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
             `;
         const permanentSalaryResult = await pool.query(permanentSalaryQuery, [employeeId]);
         const permanentSalary = permanentSalaryResult.rows[0]?.permanentsalary || 0;
-        console.log('Permanent Salary Query Result:', permanentSalaryResult.rows);
 
         // 6. Calculate total salary
         const totalSalary = (totalHours * hourlySalary) + permanentSalary;
@@ -277,7 +275,7 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
         try {
             await transporter.sendMail({
                 from: process.env.GMAIL_USER,
-                 to: process.env.GMAIL_USER,
+                to: process.env.GMAIL_USER,
                 subject: 'Salary Payment Done',
                 html: `
                     <h2>Salary Payment</h2>
@@ -308,7 +306,6 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
             totalSalary,
             message: "Payment processed and paid salaries moved to history successfully",
         });
-
     } catch (error) {
         await pool.query("ROLLBACK"); // Rollback transaction in case of error
         console.error("Error processing payment:", error);
