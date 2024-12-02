@@ -14,6 +14,7 @@ import { pool } from "../database/connection";
 
 // addhours
 
+
 // Configure Nodemailer transporter
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -22,6 +23,7 @@ const transporter = nodemailer.createTransport({
         pass: process.env.GMAIL_APP_PASSWORD
     }
 });
+
 
 export const addHours = async (req: Request, res: Response): Promise<void> => {
     const { hours } = req.body;  // Destructure userid and hours from request body
@@ -83,7 +85,7 @@ export const addPermanentSalary = async (req: Request, res: Response): Promise<v
 
 // PaymentRequest
 
-export const paymentRequest = async (req: Request, res: Response): Promise<void> => {
+export const paymentRequest = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
         const user = (req as any).user; // Access user info from the middleware
         const userid = user?.id; // Assuming the token contains the user ID as `id`
