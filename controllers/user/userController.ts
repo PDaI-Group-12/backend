@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { pool } from "../../database/connection";
-import {AuthenticatedRequest, EditUserRequestBody} from "../../types";
+import {AuthenticatedRequest} from "../auth/types";
+import {UserHistory, User, UserWithSalary, EditUserRequestBody} from "./types";
 
 /*
 List of functions:
@@ -89,7 +90,7 @@ export const getUserHistory = async (req: Request, res: Response): Promise<void>
         }
 
         // Extract totals from query result
-        const { totalhours, permanentsalary } = result.rows[0];
+        const { totalhours, permanentsalary }: UserHistory = result.rows[0];
 
         // Return the user's history in the response
         res.status(200).json({

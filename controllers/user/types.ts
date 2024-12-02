@@ -1,52 +1,23 @@
-export interface SalaryDetails {
-    userid: number;
-    amount: number;
-    paymentDate: string;
-}
-
-
-export interface HourlySalary {
-    userid: number;
-    salary: number;
-}
-
-export interface PermanentSalary {
-    userid: number;
-    salary: number;
-}
-
-export interface UnpaidSalaries {
-    hour_salary?: HourlySalary[];
-    permanent_salary?: PermanentSalary[];
-}
-
-export interface ErrorResponse {
-    message: string;
-    error?: any; // Optional additional debug information
-}
-
-
-export interface RequestDetails {
-    userid: number;
-    hours: number;
-    salary?: number; // Optional for unpaid permanent salaries
-    requestDate: string;
-}
-
-export interface UserRoleCheckResult {
-    role: string;
-}
-
-export interface EmployeeCheckResult {
+export interface User {
     id: number;
+    firstname: string;
+    lastname: string;
+    role: string;
+    iban?: string;
 }
 
-export interface UnpaidSalary {
+export interface UserWithSalary extends User {
+    salary: number | null;
+}
+export interface UserHistory {
     userid: number;
-    salary: number;
+    totalhours: number;
+    permanentsalary: number;
 }
 
-export interface UnpaidSalaries {
-    hour_salary?: UnpaidSalary[];
-    permanent_salary?: UnpaidSalary[];
+export interface EditUserRequestBody {
+    firstname?: string;
+    lastname?: string;
+    role?: string;
+    iban?: string;
 }

@@ -159,7 +159,7 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
                 subject: 'Salary Payment Request Submitted',
                 html: `
                     <h2>Salary Payment Request</h2>
-                    <p>Dear ${user.firstname || 'User'},</p>
+                    <p>Dear ${user|| 'User'},</p>
                     <p>You have submitted a payment request with the following details:</p>
                     <ul>
                         <li>User ID: ${userid}</li>
@@ -186,7 +186,6 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
                 unpaid_hours,
                 hourlySalary,
                 unpaid_permanent_salaries,
-                totalSalary
 
             }
         });
