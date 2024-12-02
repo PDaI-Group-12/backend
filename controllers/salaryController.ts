@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import nodemailer from 'nodemailer';
 import { pool } from "../database/connection";
-import { AuthenticatedRequest} from "../types";
 
 /* List of functions:
 - addhours
@@ -15,25 +14,6 @@ import { AuthenticatedRequest} from "../types";
 
 // addhours
 
-// Configure Nodemailer transporter
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD
-    }
-});
-
-// Configure Nodemailer transporter
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD
-    }
-});
-
-export const addHours = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
 // Configure Nodemailer transporter
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -259,7 +239,6 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
             `;
         const permanentSalaryResult = await pool.query(permanentSalaryQuery, [employeeId]);
         const permanentSalary = permanentSalaryResult.rows[0]?.permanentsalary || 0;
-        console.log('Permanent Salary Query Result:', permanentSalaryResult.rows);
 
         // 6. Calculate total salary
         const totalSalary = (totalHours * hourlySalary) + permanentSalary;
@@ -294,7 +273,7 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
         try {
             await transporter.sendMail({
                 from: process.env.GMAIL_USER,
-                 to: process.env.GMAIL_USER,
+                to: process.env.GMAIL_USER,
                 subject: 'Salary Payment Done',
                 html: `
                     <h2>Salary Payment</h2>
@@ -325,7 +304,6 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
             totalSalary,
             message: "Payment processed and paid salaries moved to history successfully",
         });
-
     } catch (error) {
         await pool.query("ROLLBACK"); // Rollback transaction in case of error
         console.error("Error processing payment:", error);
