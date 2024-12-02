@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { pool } from "../database/connection";
+import { pool } from "../../database/connection";
 
 // Here we define register and login crud's
 

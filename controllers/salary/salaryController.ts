@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import nodemailer from 'nodemailer';
-import { pool } from "../database/connection";
-import { AuthenticatedRequest} from "../types";
+import { pool } from "../../database/connection";
+import { AuthenticatedRequest} from "../auth/types";
+import {RequestDetails, ErrorResponse, UnpaidSalaries, PermanentSalary, HourlySalary, UserRoleCheckResult, EmployeeCheckResult, UnpaidSalary, SalaryDetails} from "../salary/types"
 
 /* List of functions:
 - addhours
@@ -26,9 +27,9 @@ const transporter = nodemailer.createTransport({
 });
 
 
-export const addHours = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+export const addHours = async (req: AuthenticatedRequest, res: Response<ErrorResponse| { message: string; entry: RequestDetails }>): Promise<void> => {
     const { hours } = req.body;  // Destructure userid and hours from request body
-    const user = (req as any).user; // Accessing user info from the token
+    const user = req.user; // Accessing user info from the token
     const userid = user?.id;
 
     // Validate that hours is a positive number
@@ -46,6 +47,12 @@ export const addHours = async (req: AuthenticatedRequest, res: Response): Promis
         `;
         const result = await pool.query(query, [userid, hours]);  // Execute query to insert data
 
+        const entry: RequestDetails = {
+            userid: result.rows[0].userid,
+            hours: result.rows[0].hours,
+            requestDate: result.rows[0].requestDate,
+        };
+
         res.status(201).json({ message: "Hours added successfully", entry: result.rows[0] });
     } catch (error) {
         console.error("Error adding hours:", error);
@@ -56,9 +63,9 @@ export const addHours = async (req: AuthenticatedRequest, res: Response): Promis
 
 // AddPermanent Salary
 
-export const addPermanentSalary = async (req: Request, res: Response): Promise<void> => {
+export const addPermanentSalary = async (req: AuthenticatedRequest, res: Response<ErrorResponse | { message: string; entry: PermanentSalary }>): Promise<void> => {
     const { salary } = req.body;  // Destructure userid and hours from request body
-    const user = (req as any).user; // Accessing user info from the token
+    const user = req.user; // Accessing user info from the token
     const userid = user?.id;
 
     // Validate that hours is a positive number
@@ -76,6 +83,11 @@ export const addPermanentSalary = async (req: Request, res: Response): Promise<v
         `;
         const result = await pool.query(query, [userid, salary]);  // Execute query to insert data
 
+        const entry: PermanentSalary = {
+            userid: result.rows[0].userid,
+            salary: result.rows[0].salary,
+        };
+
         res.status(201).json({ message: "Permanent salary added successfully", entry: result.rows[0] });
     } catch (error) {
         console.error("Error adding user history:", error);
@@ -86,10 +98,10 @@ export const addPermanentSalary = async (req: Request, res: Response): Promise<v
 
 // PaymentRequest
 
-export const paymentRequest = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+export const paymentRequest = async (req: AuthenticatedRequest, res: Response<ErrorResponse | { message: string; data: { userid: number; unpaid_hours: number; hourlySalary: number; unpaid_permanent_salaries: number } }>): Promise<void> => {
     try {
-        const user = (req as any).user; // Access user info from the middleware
-        const userid = user?.id; // Assuming the token contains the user ID as `id`
+        const user = req.user; // Access user info from the middleware
+        const userid = user?.id;
 
         // Validate the extracted userid
         if (typeof userid !== 'number') {

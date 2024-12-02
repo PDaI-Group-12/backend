@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { pool } from "../database/connection";
-import {AuthenticatedRequest, EditUserRequestBody} from "../types";
+import { pool } from "../../database/connection";
+import {AuthenticatedRequest, EditUserRequestBody} from "../../types";
 
 /*
 List of functions:

@@ -1,5 +1,5 @@
 import express from "express";
-import { getAllEmployers,getUserDataAndSalary, getUserHistory,editUser,deleteUser} from "../controllers/userController";
+import { getAllEmployers,getUserDataAndSalary, getUserHistory,editUser,deleteUser} from "../controllers/user/userController";
 import {authenticateToken} from "../middleware/authMiddleware";
 
 export const userRouter = express.Router();
