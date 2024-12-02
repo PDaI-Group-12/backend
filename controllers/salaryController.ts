@@ -15,6 +15,15 @@ import { AuthenticatedRequest} from "../types";
 
 // addhours
 
+// Configure Nodemailer transporter
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD
+    }
+});
+
 export const addHours = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
 // Configure Nodemailer transporter
 const transporter = nodemailer.createTransport({
