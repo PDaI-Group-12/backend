@@ -134,6 +134,7 @@ export const addPermanentSalary = async (req: Request, res: Response): Promise<v
 
 // PaymentRequest
 
+
 /**
  * @swagger
  * /salary/payment/request:
@@ -183,7 +184,8 @@ export const addPermanentSalary = async (req: Request, res: Response): Promise<v
  *         description: Internal server error
  */
 
-export const paymentRequest = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+export const paymentRequest = async (req: Request, res: Response): Promise<void> => {
+
     try {
         const user = (req as any).user; // Access user info from the middleware
         const userid = user?.id; // Assuming the token contains the user ID as `id`
