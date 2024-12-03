@@ -8,6 +8,34 @@ import { pool } from "../database/connection";
 const JWT_SECRET = process.env.JWT_SECRET || "jwt_secret";
 
 
+/**
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstname:
+ *                 type: string
+ *               lastname:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *               iban:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *       400:
+ *         description: Invalid input
+ */
 
 // Register crud
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -29,7 +57,28 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 };
 
-
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: Log in a user
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *       401:
+ *         description: Incorrect username or password
+ */
 
 // Login crud...
 export const login = async (req: Request, res: Response): Promise<void> => {
