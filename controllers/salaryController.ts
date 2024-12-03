@@ -12,9 +12,6 @@ import { pool } from "../database/connection";
 - GetUnpaid (need to be updated, unpaid hours are stored in request table)
 */
 
-// addhours
-
-
 // Configure Nodemailer transporter
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -24,6 +21,31 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+
+// addhours
+
+/**
+ * @swagger
+ * /salary/hours:
+ *   post:
+ *     summary: Add working hours
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hours:
+ *                 type: integer
+ *                 description: Number of hours to add
+ *                 example: 40
+ *     responses:
+ *       201:
+ *         description: Hours added successfully
+ *       400:
+ *         description: Invalid input
+ */
 
 export const addHours = async (req: Request, res: Response): Promise<void> => {
     const { hours } = req.body;  // Destructure userid and hours from request body
@@ -55,6 +77,33 @@ export const addHours = async (req: Request, res: Response): Promise<void> => {
 
 // AddPermanent Salary
 
+/**
+ * @swagger
+ * /salary/permanent:
+ *   post:
+ *     summary: Add a permanent salary
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: The user's ID
+ *                 example: "user123"
+ *               salary:
+ *                 type: integer
+ *                 description: The permanent salary to set
+ *                 example: 50000
+ *     responses:
+ *       201:
+ *         description: Permanent salary added successfully
+ *       400:
+ *         description: Invalid input
+ */
+
 export const addPermanentSalary = async (req: Request, res: Response): Promise<void> => {
     const { salary } = req.body;  // Destructure userid and hours from request body
     const user = (req as any).user; // Accessing user info from the token
@@ -84,6 +133,32 @@ export const addPermanentSalary = async (req: Request, res: Response): Promise<v
 
 
 // PaymentRequest
+
+/**
+ * @swagger
+ * /salary/payment/request:
+ *   post:
+ *     summary: Send salary payment request to employer
+ *     parameters:
+ *       - in: body
+ *         name: paymentRequestData
+ *         description: Information about the payment request
+ *         required: true
+ *         schema:
+ *           type: object
+ *           properties:
+ *             userId:
+ *               type: string
+ *               description: The user's ID
+ *             amount:
+ *               type: integer
+ *               description: The requested payment amount
+ *     responses:
+ *       200:
+ *         description: Payment request sent successfully
+ *       404:
+ *         description: User not found
+ */
 
 export const paymentRequest = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -185,6 +260,44 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response): 
 
 
 // paymentDone
+
+/**
+ * @swagger
+ * /salary/{employeeId}/payment/{employerId}:
+ *   post:
+ *     summary: Send payment done notification to employee
+ *     parameters:
+ *       - in: path
+ *         name: employeeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the employee
+ *       - in: path
+ *         name: employerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the employer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: The user's ID
+ *               amount:
+ *                 type: integer
+ *                 description: The amount paid
+ *     responses:
+ *       200:
+ *         description: Payment marked as done
+ *       404:
+ *         description: User not found
+ */
 
 export const paymentDone = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -316,6 +429,32 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
 
 // SetHourSalary
 
+/**
+ * @swagger
+ * /salary/hourly:
+ *   post:
+ *     summary: Set a hourly salary
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: The user's ID
+ *                 example: "user123"
+ *               hourlySalary:
+ *                 type: integer
+ *                 description: The hourly salary to set
+ *                 example: 30
+ *     responses:
+ *       201:
+ *         description: Hourly salary set successfully
+ *       400:
+ *         description: Invalid input
+ */
 export const setHourSalary = async (req: Request, res: Response): Promise<void> => {
     const { salary } = req.body;
     const user = (req as any).user; // Accessing user info from the token
@@ -339,8 +478,33 @@ export const setHourSalary = async (req: Request, res: Response): Promise<void> 
 };
 
 
-
 // editHoursalary
+
+/**
+ * @swagger
+ * /salary/:employeeId/edithourly:
+ *   put:
+ *     summary: Edit hourly salary
+ *     parameters:
+ *       - in: body
+ *         name: salaryData
+ *         description: User's new hourly salary
+ *         required: true
+ *         schema:
+ *           type: object
+ *           properties:
+ *             userId:
+ *               type: string
+ *               description: The user's ID
+ *             newSalary:
+ *               type: integer
+ *               description: The new hourly salary
+ *     responses:
+ *       200:
+ *         description: The salary was updated successfully
+ *       404:
+ *         description: User not found
+ */
 
 export const editHoursalary = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -398,6 +562,34 @@ export const editHoursalary = async (req: Request, res: Response): Promise<void>
 
 
 // GetUnpaid
+
+/**
+ * @swagger
+ * /salary/unpaid:
+ *   get:
+ *     summary: Get unpaid salaries
+ *     responses:
+ *       200:
+ *         description: A list of unpaid users and their details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   userId:
+ *                     type: string
+ *                     description: The user's ID
+ *                   unpaidAmount:
+ *                     type: integer
+ *                     description: The unpaid amount for the user
+ *                   name:
+ *                     type: string
+ *                     description: The user's name
+ *       404:
+ *         description: No unpaid users found
+ */
 
 export const getUnpaid = async (req: Request, res: Response): Promise<void> => {
     try {

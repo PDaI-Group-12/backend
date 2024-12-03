@@ -14,6 +14,21 @@ List of functions:
 
 // getUserDataAndSalary - fetch user data along with hourly salary based on user ID
 
+/**
+ * @swagger
+ * /user/:
+ *   get:
+ *     summary: Get user data and hourly salary
+ *     description: Fetches the logged-in user's data along with their hourly salary.
+ *     responses:
+ *       200:
+ *         description: User data and salary returned
+ *       400:
+ *         description: Invalid user ID
+ *       404:
+ *         description: User not found
+ */
+
 export const getUserDataAndSalary = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
         const user = (req as any).user; // Access user info from the middleware
@@ -63,6 +78,19 @@ export const getUserDataAndSalary = async (req: AuthenticatedRequest, res: Respo
 
 //GetUserHistory - fetch the user's history (sum of hours worked and permanent salaries)
 
+/**
+ * @swagger
+ * /user/history:
+ *   get:
+ *     summary: Get user's salary history
+ *     description: Fetches the total hours worked and permanent salary for the logged-in user.
+ *     responses:
+ *       200:
+ *         description: User history retrieved successfully
+ *       404:
+ *         description: No history found for the user
+ */
+
 export const getUserHistory = async (req: Request, res: Response): Promise<void> => {
     try {
         const user = (req as any).user; // Access user info from the middleware
@@ -109,6 +137,19 @@ export const getUserHistory = async (req: Request, res: Response): Promise<void>
 
 // GetAllEmployers - get all employers from the user table
 
+/**
+ * @swagger
+ * /user/employers:
+ *   get:
+ *     summary: Get all employers
+ *     description: Fetches all users with the role of 'employer'.
+ *     responses:
+ *       200:
+ *         description: List of employers
+ *       404:
+ *         description: No employers found
+ */
+
 export const getAllEmployers = async (req: Request, res: Response): Promise<void> => {
     try {
         const query = `
@@ -134,6 +175,36 @@ export const getAllEmployers = async (req: Request, res: Response): Promise<void
 
 
 // Edit user
+
+/**
+ * @swagger
+ * /user/edit:
+ *   put:
+ *     summary: Edit user data
+ *     description: Edits the logged-in user's data.
+ *     parameters:
+ *       - in: body
+ *         name: user
+ *         description: User data to be updated
+ *         schema:
+ *           type: object
+ *           properties:
+ *             firstname:
+ *               type: string
+ *             lastname:
+ *               type: string
+ *             role:
+ *               type: string
+ *             iban:
+ *               type: string
+ *     responses:
+ *       200:
+ *         description: User data updated successfully
+ *       400:
+ *         description: No fields provided for update
+ *       404:
+ *         description: User not found
+ */
 
 export const editUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const user = (req as any).user; // Accessing user info from the token
@@ -177,6 +248,21 @@ export const editUser = async (req: AuthenticatedRequest, res: Response): Promis
 
 
 // deleteUser
+
+/**
+ * @swagger
+ * /user/delete:
+ *   delete:
+ *     summary: Delete user account and associated data
+ *     description: Deletes the logged-in user's account and associated data.
+ *     responses:
+ *       200:
+ *         description: User and associated data deleted successfully
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Failed to delete user
+ */
 
 export const deleteUser = async (req: Request, res: Response): Promise<void> => {
     const user = (req as any).user; // Accessing user info from the token
