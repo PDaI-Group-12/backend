@@ -139,6 +139,7 @@ export const addPermanentSalary = async (req: Request, res: Response): Promise<v
  * /salary/payment/request:
  *   post:
  *     summary: Send salary payment request to employer
+ *     description: This endpoint allows the user to request salary payment by submitting details about unpaid hours and permanent salaries. It also sends an email notification to the employer.
  *     parameters:
  *       - in: body
  *         name: paymentRequestData
@@ -155,9 +156,31 @@ export const addPermanentSalary = async (req: Request, res: Response): Promise<v
  *               description: The requested payment amount
  *     responses:
  *       200:
- *         description: Payment request sent successfully
- *       404:
- *         description: User not found
+ *         description: Payment request sent successfully, including unpaid hours and permanent salaries
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 userid:
+ *                   type: string
+ *                   description: The user's ID
+ *                 unpaid_hours:
+ *                   type: integer
+ *                   description: Total unpaid hours for the user
+ *                 hourlySalary:
+ *                   type: integer
+ *                   description: Hourly salary rate of the user
+ *                 unpaid_permanent_salaries:
+ *                   type: integer
+ *                   description: Unpaid salary from permanent contracts
+ *                 totalSalary:
+ *                   type: integer
+ *                   description: Total unpaid salary (sum of unpaid hours and permanent salary)
+ *       400:
+ *         description: Invalid user ID, missing user ID, or no unpaid salaries to request
+ *       500:
+ *         description: Internal server error
  */
 
 export const paymentRequest = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -266,6 +289,7 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response): 
  * /salary/{employeeId}/payment/{employerId}:
  *   post:
  *     summary: Send payment done notification to employee
+ *     description: Marks a payment as done for an employee, including salary details and email notification to the employer.
  *     parameters:
  *       - in: path
  *         name: employeeId
@@ -294,10 +318,36 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response): 
  *                 description: The amount paid
  *     responses:
  *       200:
- *         description: Payment marked as done
+ *         description: Payment marked as done, and details moved to history
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 employeeId:
+ *                   type: string
+ *                   description: The employee's ID
+ *                 totalHours:
+ *                   type: integer
+ *                   description: Total unpaid hours for the employee
+ *                 hourlySalary:
+ *                   type: integer
+ *                   description: Hourly salary of the employee
+ *                 permanentSalary:
+ *                   type: integer
+ *                   description: Unpaid permanent salary of the employee
+ *                 totalSalary:
+ *                   type: integer
+ *                   description: The total salary paid (sum of unpaid hours and permanent salary)
+ *                 message:
+ *                   type: string
+ *                   description: A success message confirming payment was processed
  *       404:
- *         description: User not found
+ *         description: Employee or employer not found, or employee has no unpaid salary
+ *       500:
+ *         description: Internal server error
  */
+
 
 export const paymentDone = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -568,27 +618,34 @@ export const editHoursalary = async (req: Request, res: Response): Promise<void>
  * /salary/unpaid:
  *   get:
  *     summary: Get unpaid salaries
+ *     description: This endpoint calculates and returns the total unpaid hours and salary for the authenticated user, including unpaid permanent salaries and hourly salaries.
  *     responses:
  *       200:
- *         description: A list of unpaid users and their details
+ *         description: A list of unpaid details for the user
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   userId:
- *                     type: string
- *                     description: The user's ID
- *                   unpaidAmount:
- *                     type: integer
- *                     description: The unpaid amount for the user
- *                   name:
- *                     type: string
- *                     description: The user's name
- *       404:
- *         description: No unpaid users found
+ *               type: object
+ *               properties:
+ *                 userid:
+ *                   type: string
+ *                   description: The user's ID
+ *                 unpaid_hours:
+ *                   type: integer
+ *                   description: Total unpaid hours for the user
+ *                 hourlySalary:
+ *                   type: integer
+ *                   description: Hourly salary rate of the user
+ *                 unpaid_permanent_salaries:
+ *                   type: integer
+ *                   description: Unpaid salary from permanent contracts
+ *                 totalSalary:
+ *                   type: integer
+ *                   description: Total unpaid salary (sum of unpaid hours and permanent salary)
+ *       400:
+ *         description: Invalid user ID, missing user ID, or no unpaid salaries to request
+ *       500:
+ *         description: Internal server error
  */
 
 export const getUnpaid = async (req: Request, res: Response): Promise<void> => {

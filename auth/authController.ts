@@ -20,9 +20,15 @@ const JWT_SECRET = process.env.JWT_SECRET || "jwt_secret";
  *           schema:
  *             type: object
  *             properties:
- *               username:
+ *               firstname:
+ *                 type: string
+ *               lastname:
  *                 type: string
  *               password:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *               iban:
  *                 type: string
  *     responses:
  *       201:
