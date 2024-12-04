@@ -1,3 +1,4 @@
+
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 
@@ -8,10 +9,17 @@ const options = {
             title: "API Documentation",
             version: "1.0.0",
         },
+        servers: [
+            {
+                url:"http://localhost:3000",
+            },
+        ],
     },
-    apis: ["./auth/*.ts", "./controllers/*.ts"] // files, where Swagger-comments exits
+    apis: ["./auth/*.ts", "./controllers/salary/*.ts", "./controllers/user/*.ts"] // files, where Swagger-comments exits
 };
 
-const specs = swaggerJsdoc(options);
+const swaggerSpecs = swaggerJsdoc(options);
 
-exports = { swaggerUi, specs };
+console.log("Swagger specs generated:", JSON.stringify(swaggerSpecs, null, 2));
+
+export { swaggerUi, swaggerSpecs };

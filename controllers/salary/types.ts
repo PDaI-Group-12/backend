@@ -20,6 +20,7 @@ export interface PaymentRequestData {
     unpaid_hours: number;
     hourlySalary: number;
     unpaid_permanent_salaries: number;
+    totalSalary: number;
 }
 
 export interface PaymentRequestResponse {
