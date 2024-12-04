@@ -2,7 +2,15 @@ import { Request, Response } from "express";
 import nodemailer from 'nodemailer';
 import { pool } from "../../database/connection";
 import { AuthenticatedRequest} from "../auth/types";
-import {RequestDetails, ErrorResponse, UnpaidSalaries, PermanentSalary, HourlySalary, UserRoleCheckResult, EmployeeCheckResult, UnpaidSalary, SalaryDetails} from "../salary/types"
+import {
+    RequestDetails,
+    ErrorResponse,
+    PermanentSalary,
+    PaymentRequestData,
+    PaymentDoneData,
+    SetHourSalaryResponse,
+    EditHourSalaryResponse, GetUnpaidResponse
+} from "../salary/types"
 
 /* List of functions:
 - addhours
@@ -53,7 +61,7 @@ export const addHours = async (req: AuthenticatedRequest, res: Response<ErrorRes
             requestDate: result.rows[0].requestDate,
         };
 
-        res.status(201).json({ message: "Hours added successfully", entry: result.rows[0] });
+        res.status(201).json({ message: "Hours added successfully", entry });
     } catch (error) {
         console.error("Error adding hours:", error);
         res.status(500).json({ message: "Error adding hours", error });
@@ -69,7 +77,7 @@ export const addPermanentSalary = async (req: AuthenticatedRequest, res: Respons
     const userid = user?.id;
 
     // Validate that hours is a positive number
-    if (salary <= 0) {
+    if (typeof salary !== "number" || salary <= 0) {
         res.status(400).json({ message: "Permanent salary must be positive value" });
         return;
     }
@@ -88,7 +96,7 @@ export const addPermanentSalary = async (req: AuthenticatedRequest, res: Respons
             salary: result.rows[0].salary,
         };
 
-        res.status(201).json({ message: "Permanent salary added successfully", entry: result.rows[0] });
+        res.status(201).json({ message: "Permanent salary added successfully", entry });
     } catch (error) {
         console.error("Error adding user history:", error);
         res.status(500).json({ message: "Error adding permanent salary", error });
@@ -98,7 +106,7 @@ export const addPermanentSalary = async (req: AuthenticatedRequest, res: Respons
 
 // PaymentRequest
 
-export const paymentRequest = async (req: AuthenticatedRequest, res: Response<ErrorResponse | { message: string; data: { userid: number; unpaid_hours: number; hourlySalary: number; unpaid_permanent_salaries: number } }>): Promise<void> => {
+export const paymentRequest = async (req: AuthenticatedRequest, res: Response<ErrorResponse | { message: string; data: PaymentRequestData }>): Promise<void> => {
     try {
         const user = req.user; // Access user info from the middleware
         const userid = user?.id;
@@ -198,9 +206,9 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
 
 // paymentDone
 
-export const paymentDone = async (req: Request, res: Response): Promise<void> => {
+export const paymentDone = async (req: AuthenticatedRequest, res: Response<ErrorResponse | { message: string; data: PaymentDoneData }>): Promise<void> => {
     try {
-        const user = (req as any).user; // Access user info from the middleware
+        const user = req.user; // Access user info from the middleware
         const userid = user?.id; // Assuming the token contains the user ID as `id`
 
         // Validate the extracted userid
@@ -312,12 +320,14 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
 
         // 9. Send response
         res.status(200).json({
-            employeeId: employeeId,
-            totalHours: totalHours,
-            hourlySalary: hourlySalary,
-            permanentSalary: permanentSalary,
-            totalSalary,
             message: "Payment processed and paid salaries moved to history successfully",
+            data: {
+                employeeId: parseInt(employeeId),
+                totalHours,
+                hourlySalary,
+                permanentSalary,
+                totalSalary,
+            }
         });
 
     } catch (error) {
@@ -330,9 +340,9 @@ export const paymentDone = async (req: Request, res: Response): Promise<void> =>
 
 // SetHourSalary
 
-export const setHourSalary = async (req: Request, res: Response): Promise<void> => {
+export const setHourSalary = async (req: AuthenticatedRequest, res: Response<SetHourSalaryResponse>): Promise<void> => {
     const { salary } = req.body;
-    const user = (req as any).user; // Accessing user info from the token
+    const user = req.user; // Accessing user info from the token
     const userid = user?.id;
 
     // Basic input validation
@@ -356,9 +366,9 @@ export const setHourSalary = async (req: Request, res: Response): Promise<void> 
 
 // editHoursalary
 
-export const editHoursalary = async (req: Request, res: Response): Promise<void> => {
+export const editHoursalary = async (req: AuthenticatedRequest, res: Response<EditHourSalaryResponse>): Promise<void> => {
     try {
-        const user = (req as any).user;
+        const user = req.user;
         const userId = user?.id;
         const { employeeId } = req.params;
         const { newSalary } = req.body;
@@ -413,10 +423,10 @@ export const editHoursalary = async (req: Request, res: Response): Promise<void>
 
 // GetUnpaid
 
-export const getUnpaid = async (req: Request, res: Response): Promise<void> => {
+export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpaidResponse>): Promise<void> => {
     try {
-        const user = (req as any).user; // Access user info from the middleware
-        const userid = user?.id; // Assuming the token contains the user ID as `id`
+        const user = req.user;
+        const userid = user?.id;
 
         // Validate the extracted userid
         if (typeof userid !== 'number') {
@@ -446,7 +456,6 @@ export const getUnpaid = async (req: Request, res: Response): Promise<void> => {
         `;
 
         const hourlySalaryResult = await pool.query(hourSalaryQuery, [userid]);
-
         const hourlySalary = hourlySalaryResult.rows[0]?.hourlysalary ?? 0;
 
         // Query to check for unpaid salaries in the permanent_salary table
