@@ -22,9 +22,6 @@ import {
 - GetUnpaid (need to be updated, unpaid hours are stored in request table)
 */
 
-// addhours
-
-
 // Configure Nodemailer transporter
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -34,6 +31,31 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+
+// addhours
+
+/**
+ * @swagger
+ * /salary/hours:
+ *   post:
+ *     summary: Add working hours
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               hours:
+ *                 type: integer
+ *                 description: Number of hours to add
+ *                 example: 40
+ *     responses:
+ *       201:
+ *         description: Hours added successfully
+ *       400:
+ *         description: Invalid input
+ */
 
 export const addHours = async (req: AuthenticatedRequest, res: Response<ErrorResponse| { message: string; entry: RequestDetails }>): Promise<void> => {
     const { hours } = req.body;  // Destructure userid and hours from request body
@@ -71,6 +93,33 @@ export const addHours = async (req: AuthenticatedRequest, res: Response<ErrorRes
 
 // AddPermanent Salary
 
+/**
+ * @swagger
+ * /salary/permanent:
+ *   post:
+ *     summary: Add a permanent salary
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: The user's ID
+ *                 example: "user123"
+ *               salary:
+ *                 type: integer
+ *                 description: The permanent salary to set
+ *                 example: 50000
+ *     responses:
+ *       201:
+ *         description: Permanent salary added successfully
+ *       400:
+ *         description: Invalid input
+ */
+
 export const addPermanentSalary = async (req: AuthenticatedRequest, res: Response<ErrorResponse | { message: string; entry: PermanentSalary }>): Promise<void> => {
     const { salary } = req.body;  // Destructure userid and hours from request body
     const user = req.user; // Accessing user info from the token
@@ -105,6 +154,58 @@ export const addPermanentSalary = async (req: AuthenticatedRequest, res: Respons
 
 
 // PaymentRequest
+
+
+/**
+ * @swagger
+ * /salary/payment/request:
+ *   post:
+ *     summary: Send salary payment request to employer
+ *     description: This endpoint allows the user to request salary payment by submitting details about unpaid hours and permanent salaries. It also sends an email notification to the employer.
+ *     parameters:
+ *       - in: body
+ *         name: paymentRequestData
+ *         description: Information about the payment request
+ *         required: true
+ *         schema:
+ *           type: object
+ *           properties:
+ *             userId:
+ *               type: string
+ *               description: The user's ID
+ *             amount:
+ *               type: integer
+ *               description: The requested payment amount
+ *     responses:
+ *       200:
+ *         description: Payment request sent successfully, including unpaid hours and permanent salaries
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 userid:
+ *                   type: string
+ *                   description: The user's ID
+ *                 unpaid_hours:
+ *                   type: integer
+ *                   description: Total unpaid hours for the user
+ *                 hourlySalary:
+ *                   type: integer
+ *                   description: Hourly salary rate of the user
+ *                 unpaid_permanent_salaries:
+ *                   type: integer
+ *                   description: Unpaid salary from permanent contracts
+ *                 totalSalary:
+ *                   type: integer
+ *                   description: Total unpaid salary (sum of unpaid hours and permanent salary)
+ *       400:
+ *         description: Invalid user ID, missing user ID, or no unpaid salaries to request
+ *       500:
+ *         description: Internal server error
+ */
+
+
 
 export const paymentRequest = async (req: AuthenticatedRequest, res: Response<ErrorResponse | { message: string; data: PaymentRequestData }>): Promise<void> => {
     try {
@@ -194,6 +295,7 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
                 unpaid_hours,
                 hourlySalary,
                 unpaid_permanent_salaries,
+                totalSalary
 
             }
         });
@@ -205,6 +307,71 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
 
 
 // paymentDone
+
+/**
+ * @swagger
+ * /salary/{employeeId}/payment/{employerId}:
+ *   post:
+ *     summary: Send payment done notification to employee
+ *     description: Marks a payment as done for an employee, including salary details and email notification to the employer.
+ *     parameters:
+ *       - in: path
+ *         name: employeeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the employee
+ *       - in: path
+ *         name: employerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the employer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: The user's ID
+ *               amount:
+ *                 type: integer
+ *                 description: The amount paid
+ *     responses:
+ *       200:
+ *         description: Payment marked as done, and details moved to history
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 employeeId:
+ *                   type: string
+ *                   description: The employee's ID
+ *                 totalHours:
+ *                   type: integer
+ *                   description: Total unpaid hours for the employee
+ *                 hourlySalary:
+ *                   type: integer
+ *                   description: Hourly salary of the employee
+ *                 permanentSalary:
+ *                   type: integer
+ *                   description: Unpaid permanent salary of the employee
+ *                 totalSalary:
+ *                   type: integer
+ *                   description: The total salary paid (sum of unpaid hours and permanent salary)
+ *                 message:
+ *                   type: string
+ *                   description: A success message confirming payment was processed
+ *       404:
+ *         description: Employee or employer not found, or employee has no unpaid salary
+ *       500:
+ *         description: Internal server error
+ */
+
 
 export const paymentDone = async (req: AuthenticatedRequest, res: Response<ErrorResponse | { message: string; data: PaymentDoneData }>): Promise<void> => {
     try {
@@ -261,7 +428,6 @@ export const paymentDone = async (req: AuthenticatedRequest, res: Response<Error
             `;
         const permanentSalaryResult = await pool.query(permanentSalaryQuery, [employeeId]);
         const permanentSalary = permanentSalaryResult.rows[0]?.permanentsalary || 0;
-        console.log('Permanent Salary Query Result:', permanentSalaryResult.rows);
 
         // 6. Calculate total salary
         const totalSalary = (totalHours * hourlySalary) + permanentSalary;
@@ -296,7 +462,7 @@ export const paymentDone = async (req: AuthenticatedRequest, res: Response<Error
         try {
             await transporter.sendMail({
                 from: process.env.GMAIL_USER,
-                 to: process.env.GMAIL_USER,
+                to: process.env.GMAIL_USER,
                 subject: 'Salary Payment Done',
                 html: `
                     <h2>Salary Payment</h2>
@@ -329,7 +495,6 @@ export const paymentDone = async (req: AuthenticatedRequest, res: Response<Error
                 totalSalary,
             }
         });
-
     } catch (error) {
         await pool.query("ROLLBACK"); // Rollback transaction in case of error
         console.error("Error processing payment:", error);
@@ -340,6 +505,32 @@ export const paymentDone = async (req: AuthenticatedRequest, res: Response<Error
 
 // SetHourSalary
 
+/**
+ * @swagger
+ * /salary/hourly:
+ *   post:
+ *     summary: Set a hourly salary
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: The user's ID
+ *                 example: "user123"
+ *               hourlySalary:
+ *                 type: integer
+ *                 description: The hourly salary to set
+ *                 example: 30
+ *     responses:
+ *       201:
+ *         description: Hourly salary set successfully
+ *       400:
+ *         description: Invalid input
+ */
 export const setHourSalary = async (req: AuthenticatedRequest, res: Response<SetHourSalaryResponse>): Promise<void> => {
     const { salary } = req.body;
     const user = req.user; // Accessing user info from the token
@@ -363,10 +554,35 @@ export const setHourSalary = async (req: AuthenticatedRequest, res: Response<Set
 };
 
 
-
 // editHoursalary
 
 export const editHoursalary = async (req: AuthenticatedRequest, res: Response<EditHourSalaryResponse>): Promise<void> => {
+/**
+ * @swagger
+ * /salary/:employeeId/edithourly:
+ *   put:
+ *     summary: Edit hourly salary
+ *     parameters:
+ *       - in: body
+ *         name: salaryData
+ *         description: User's new hourly salary
+ *         required: true
+ *         schema:
+ *           type: object
+ *           properties:
+ *             userId:
+ *               type: string
+ *               description: The user's ID
+ *             newSalary:
+ *               type: integer
+ *               description: The new hourly salary
+ *     responses:
+ *       200:
+ *         description: The salary was updated successfully
+ *       404:
+ *         description: User not found
+ */
+
     try {
         const user = req.user;
         const userId = user?.id;
@@ -424,6 +640,41 @@ export const editHoursalary = async (req: AuthenticatedRequest, res: Response<Ed
 // GetUnpaid
 
 export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpaidResponse>): Promise<void> => {
+/**
+ * @swagger
+ * /salary/unpaid:
+ *   get:
+ *     summary: Get unpaid salaries
+ *     description: This endpoint calculates and returns the total unpaid hours and salary for the authenticated user, including unpaid permanent salaries and hourly salaries.
+ *     responses:
+ *       200:
+ *         description: A list of unpaid details for the user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 userid:
+ *                   type: string
+ *                   description: The user's ID
+ *                 unpaid_hours:
+ *                   type: integer
+ *                   description: Total unpaid hours for the user
+ *                 hourlySalary:
+ *                   type: integer
+ *                   description: Hourly salary rate of the user
+ *                 unpaid_permanent_salaries:
+ *                   type: integer
+ *                   description: Unpaid salary from permanent contracts
+ *                 totalSalary:
+ *                   type: integer
+ *                   description: Total unpaid salary (sum of unpaid hours and permanent salary)
+ *       400:
+ *         description: Invalid user ID, missing user ID, or no unpaid salaries to request
+ *       500:
+ *         description: Internal server error
+ */
+
     try {
         const user = req.user;
         const userid = user?.id;
