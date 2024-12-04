@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
-import { pool } from "../database/connection";
-import {AuthenticatedRequest, EditUserRequestBody} from "../types";
+import { pool } from "../../database/connection";
+import {AuthenticatedRequest} from "../auth/types";
+import {UserHistory, User, EditUserRequestBody, UpdatedUser, Employer, DeletedUser} from "./types";
 
 /*
 List of functions:
@@ -59,7 +60,7 @@ List of functions:
 
 export const getUserDataAndSalary = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-        const user = (req as any).user; // Access user info from the middleware
+        const user = req.user; // Access user info from the middleware
         const userid = user?.id; // Assuming the token contains the user ID as `id`
 
         // Validate the extracted userid
@@ -75,18 +76,19 @@ export const getUserDataAndSalary = async (req: AuthenticatedRequest, res: Respo
             LEFT JOIN hour_salary ON "user".id = hour_salary.userid
             WHERE "user".Id = $1
         `;
-        const user_data = await pool.query(userDataQuery, [userid]);  // Execute query with userId
-        console.log('User Data Query Result:', user_data.rows);
+        const result = await pool.query(userDataQuery, [userid]);  // Execute query with userId
+
 
         // If no user is found, return 404 error
-        if (user_data.rowCount === 0) {
+        if (result.rowCount === 0) {
             console.log(`User with ID ${userid} not found.`);
             res.status(404).json({ message: "User not found" });
             return;
         }
 
         // If user is found, send user data and salary in response
-        const userData = user_data.rows[0];
+        const userData: User = result.rows[0];
+
         res.json({
             user: {
                 id: userData.id,
@@ -142,9 +144,9 @@ export const getUserDataAndSalary = async (req: AuthenticatedRequest, res: Respo
  */
 
 
-export const getUserHistory = async (req: Request, res: Response): Promise<void> => {
+export const getUserHistory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-        const user = (req as any).user; // Access user info from the middleware
+        const user = req.user; // Access user info from the middleware
         const userid = user?.id; // Assuming the token contains the user ID as `id`
 
         // Validate the extracted userid
@@ -168,7 +170,7 @@ export const getUserHistory = async (req: Request, res: Response): Promise<void>
         }
 
         // Extract totals from query result
-        const { totalhours, permanentsalary } = result.rows[0];
+        const { totalhours, permanentsalary }: UserHistory = result.rows[0];
 
         // Return the user's history in the response
         res.status(200).json({
@@ -220,14 +222,14 @@ export const getUserHistory = async (req: Request, res: Response): Promise<void>
  */
 
 
-export const getAllEmployers = async (req: Request, res: Response): Promise<void> => {
+export const getAllEmployers = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
         const query = `
             SELECT id, firstname, lastname 
             FROM "user" 
             WHERE "role" = 'employer'
             `;
-        const result = await pool.query(query);
+        const result = await pool.query<Employer>(query);
 
         if (result.rows.length === 0) {
             console.log("No employers found");  // Log when no employers are found
@@ -235,7 +237,10 @@ export const getAllEmployers = async (req: Request, res: Response): Promise<void
             return;
         }
 
-        res.status(200).json(result.rows);
+        res.status(200).json({
+            message: "Employers retrieved successfully",
+            employers: result.rows,
+        });
 
     } catch (error) {
         console.error("Error fetching employers:", error);
@@ -277,11 +282,19 @@ export const getAllEmployers = async (req: Request, res: Response): Promise<void
  */
 
 export const editUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const user = (req as any).user; // Accessing user info from the token
+    const user = req.user; // Accessing user info from the token
     const userid = user?.id;
-    const { firstname, lastname, role, iban }: EditUserRequestBody = req.body;
+
 
     try {
+
+        if (typeof userid !== 'number') {
+            res.status(400).json({ message: "Invalid user ID. Please log in again." });
+            return;
+        }
+
+        const { firstname, lastname, role, iban }: EditUserRequestBody = req.body;
+
         if (!firstname && !lastname && !role && !iban) {
             res.status(400).json({ message: "No all required fields provided for update" });
             return;
@@ -299,16 +312,17 @@ export const editUser = async (req: AuthenticatedRequest, res: Response): Promis
             `;
         const values = [firstname, lastname, role, iban, userid];
 
-        const result = await pool.query(query, values);
+        const result = await pool.query<UpdatedUser>(query, values);
 
         if (result.rowCount === 0) {
             res.status(404).json({ message: `User with ID not found` });
             return;
         }
 
+        const updatedUser: UpdatedUser = result.rows[0];
         res.status(200).json({
             message: "User data updated successfully",
-            user: result.rows[0],
+            user: updatedUser,
         });
     } catch (error) {
         console.error("Error updating user data:", error);
@@ -334,8 +348,8 @@ export const editUser = async (req: AuthenticatedRequest, res: Response): Promis
  *         description: Failed to delete user
  */
 
-export const deleteUser = async (req: Request, res: Response): Promise<void> => {
-    const user = (req as any).user; // Accessing user info from the token
+export const deleteUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const user = req.user; // Accessing user info from the token
     const userid = user?.id;
 
     try {
@@ -343,7 +357,7 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
             SELECT id FROM "user" 
             WHERE id = $1
         `;
-        const userExists = await pool.query(checkUserQuery, [userid]);
+        const userExists = await pool.query<DeletedUser>(checkUserQuery, [userid]);
 
         if (userExists.rowCount === 0) {
             res.status(404).json({ message: "User not found" });
@@ -367,7 +381,7 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
             WHERE id = $1 
             RETURNING id
             `;
-        const deleteResult = await pool.query(deleteQuery, [userid]);
+        const deleteResult = await pool.query<DeletedUser>(deleteQuery, [userid]);
 
         if (deleteResult.rowCount === 0) {
             res.status(500).json({ message: `Failed to delete user with ID ${userid}` });
