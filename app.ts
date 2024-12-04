@@ -3,31 +3,13 @@ import path from "path";
 import cookieParser from "cookie-parser";
 import logger from "morgan";
 import cors from "cors";
-import swaggerJsdoc from "swagger-jsdoc";
-import swaggerUi from "swagger-ui-express";
 
 import { authRouter } from "./routes/auth";
 import { pool } from "./database/connection";
 import { userRouter } from "./routes/user";
 import { salaryRouter } from "./routes/salary";
 
-// Swagger-configuration
-const swaggerOptions = {
-    definition: {
-        openapi: "3.0.0",
-        info: {
-            title: "API Documentation",
-            version: "1.0.0",
-        },
-        servers: [
-            {
-                url:"http://localhost:3000",
-            },
-        ],
-    },
-    apis: ["./auth/*.ts", "./controllers/*.ts"], // Polut, joista Swagger hakee kommentit
-};
-const swaggerDocs = swaggerJsdoc(swaggerOptions);
+import { swaggerUi, swaggerSpecs } from "./swaggerConfig";
 
 export const app = express();
 
@@ -40,7 +22,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(cors());
 
 // Swagger-interface
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 // Routes
 app.use("/auth", authRouter);
