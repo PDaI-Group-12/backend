@@ -13,6 +13,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "jwt_secret";
  * /auth/register:
  *   post:
  *     summary: Register a new user
+ *     description: Creates a new user in the system with the provided details.
  *     requestBody:
  *       required: true
  *       content:
@@ -22,36 +23,59 @@ const JWT_SECRET = process.env.JWT_SECRET || "jwt_secret";
  *             properties:
  *               firstname:
  *                 type: string
+ *                 description: First name of the user
+ *
  *               lastname:
  *                 type: string
+ *                 description: Last name of the user
+ *
  *               password:
  *                 type: string
+ *                 description: User's password
  *               role:
  *                 type: string
+ *                 description: Role assigned to the user
  *               iban:
  *                 type: string
+ *                 description: IBAN number of the user
+ *               username:
+ *                 type: string
+ *                 description: Username for login
  *     responses:
  *       201:
  *         description: User registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Success message
+ *                 userId:
+ *                   type: integer
+ *                   description: The ID of the registered user
  *       400:
  *         description: Invalid input
+ *       500:
+ *         description: Registration failed due to a server error
  */
 
 // Register crud
 export const register = async (req: Request, res: Response): Promise<void> => {
-    const { firstname, lastname, password, role, iban } = req.body;
+    const { firstname, lastname, password, role, iban, username } = req.body;
 
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const query =
-            `INSERT INTO "user" (firstname, lastname, password, role, iban)
-            VALUES ($1, $2, $3, $4, $5) RETURNING id;
+            `INSERT INTO "user" (firstname, lastname, password, role, iban, username)
+            VALUES ($1, $2, $3, $4, $5, $6) RETURNING id;
         `;
-        const result = await pool.query(query, [firstname, lastname, hashedPassword, role, iban]);
+        const result = await pool.query(query, [firstname, lastname, hashedPassword, role, iban, username]);
         const userId = result.rows[0].id;
 
-        res.status(201).json({ message: "User registered successfully", userId });
+        res.status(201).json({ message: `User registered successfully ${username}`, userId });
     } catch (error) {
         res.status(500).json({ message: "Registration failed", error });
     }
@@ -82,11 +106,11 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 // Login crud...
 export const login = async (req: Request, res: Response): Promise<void> => {
-    const { firstname, password } = req.body;
+    const { username, password } = req.body;
 
     try {
-        const query = `SELECT * FROM "user" WHERE firstname = $1`;
-        const result = await pool.query(query, [firstname]);
+        const query = `SELECT * FROM "user" WHERE username = $1`;
+        const result = await pool.query(query, [username]);
 
         if (result.rowCount === 0) {
             res.status(400).json({ message: "Username or password incorrect" });

@@ -192,7 +192,7 @@ export const getUserHistory = async (req: AuthenticatedRequest, res: Response): 
 
 /**
  * @swagger
- * /user/employers:
+ * /user/employees:
  *   get:
  *     summary: Get all employers
  *     description: Fetches all users with the role of 'employer'.
@@ -222,12 +222,12 @@ export const getUserHistory = async (req: AuthenticatedRequest, res: Response): 
  */
 
 
-export const getAllEmployers = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+export const getAllEmployees = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
         const query = `
             SELECT id, firstname, lastname 
             FROM "user" 
-            WHERE "role" = 'employer'
+            WHERE "role" = 'user'
             `;
         const result = await pool.query<Employer>(query);
 
