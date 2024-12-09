@@ -33,7 +33,6 @@ const transporter = nodemailer.createTransport({
 
 
 // addhours
-
 /**
  * @swagger
  * /salary/hours:
@@ -46,9 +45,10 @@ const transporter = nodemailer.createTransport({
  *           schema:
  *             type: object
  *             properties:
- *              userId:
+ *               userId:
  *                 type: integer
  *                 description: The user's ID
+ *                 example: 1
  *               hours:
  *                 type: integer
  *                 description: Number of hours to add
@@ -56,8 +56,31 @@ const transporter = nodemailer.createTransport({
  *     responses:
  *       201:
  *         description: Hours added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Success message
+ *                 entry:
+ *                   type: object
+ *                   properties:
+ *                     userid:
+ *                       type: integer
+ *                       description: The user's ID
+ *                     hours:
+ *                       type: integer
+ *                       description: Added hours
+ *                     requestDate:
+ *                       type: string
+ *                       format: date-time
+ *                       description: Date and time of the request
  *       400:
  *         description: Invalid input
+ *       500:
+ *         description: Internal server error
  */
 
 export const addHours = async (req: AuthenticatedRequest, res: Response<ErrorResponse| { message: string; entry: RequestDetails }>): Promise<void> => {
