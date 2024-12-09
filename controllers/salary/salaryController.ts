@@ -295,7 +295,6 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
                 unpaid_hours,
                 hourlySalary,
                 unpaid_permanent_salaries,
-                totalSalary
 
             }
         });
