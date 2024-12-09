@@ -15,7 +15,7 @@ const options = {
             },
         ],
     },
-    apis: [".controllers/auth/*.ts", "./controllers/salary/*.ts", "./controllers/user/*.ts"] // files, where Swagger-comments exits
+    apis: ["./controllers/auth/*.ts", "./controllers/salary/*.ts", "./controllers/user/*.ts"] // files, where Swagger-comments exits
 };
 
 const swaggerSpecs = swaggerJsdoc(options);
