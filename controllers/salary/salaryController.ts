@@ -33,7 +33,6 @@ const transporter = nodemailer.createTransport({
 
 
 // addhours
-
 /**
  * @swagger
  * /salary/hours:
@@ -46,15 +45,42 @@ const transporter = nodemailer.createTransport({
  *           schema:
  *             type: object
  *             properties:
+ *               userId:
+ *                 type: integer
+ *                 description: The user's ID
+ *                 example: 1
  *               hours:
  *                 type: integer
  *                 description: Number of hours to add
- *                 example: 40
+ *                 example: 30
  *     responses:
  *       201:
  *         description: Hours added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Success message
+ *                 entry:
+ *                   type: object
+ *                   properties:
+ *                     userid:
+ *                       type: integer
+ *                       description: The user's ID
+ *                     hours:
+ *                       type: integer
+ *                       description: Added hours
+ *                     requestDate:
+ *                       type: string
+ *                       format: date-time
+ *                       description: Date and time of the request
  *       400:
  *         description: Invalid input
+ *       500:
+ *         description: Internal server error
  */
 
 export const addHours = async (req: AuthenticatedRequest, res: Response<ErrorResponse| { message: string; entry: RequestDetails }>): Promise<void> => {
@@ -106,9 +132,9 @@ export const addHours = async (req: AuthenticatedRequest, res: Response<ErrorRes
  *             type: object
  *             properties:
  *               userId:
- *                 type: string
+ *                 type: integer
  *                 description: The user's ID
- *                 example: "user123"
+ *
  *               salary:
  *                 type: integer
  *                 description: The permanent salary to set
@@ -171,7 +197,7 @@ export const addPermanentSalary = async (req: AuthenticatedRequest, res: Respons
  *           type: object
  *           properties:
  *             userId:
- *               type: string
+ *               type: integer
  *               description: The user's ID
  *             amount:
  *               type: integer
@@ -185,7 +211,7 @@ export const addPermanentSalary = async (req: AuthenticatedRequest, res: Respons
  *               type: object
  *               properties:
  *                 userid:
- *                   type: string
+ *                   type: integer
  *                   description: The user's ID
  *                 unpaid_hours:
  *                   type: integer
@@ -310,7 +336,7 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
 
 /**
  * @swagger
- * /salary/{employeeId}/payment/{employerId}:
+ * /salary/employeeId/payment/employerId:
  *   post:
  *     summary: Send payment done notification to employee
  *     description: Marks a payment as done for an employee, including salary details and email notification to the employer.
@@ -319,13 +345,13 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
  *         name: employeeId
  *         required: true
  *         schema:
- *           type: string
+ *           type: integer
  *         description: The ID of the employee
  *       - in: path
  *         name: employerId
  *         required: true
  *         schema:
- *           type: string
+ *           type: integer
  *         description: The ID of the employer
  *     requestBody:
  *       required: true
@@ -335,7 +361,7 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
  *             type: object
  *             properties:
  *               userId:
- *                 type: string
+ *                 type: integer
  *                 description: The user's ID
  *               amount:
  *                 type: integer
@@ -349,7 +375,7 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
  *               type: object
  *               properties:
  *                 employeeId:
- *                   type: string
+ *                   type: integer
  *                   description: The employee's ID
  *                 totalHours:
  *                   type: integer
@@ -518,9 +544,8 @@ export const paymentDone = async (req: AuthenticatedRequest, res: Response<Error
  *             type: object
  *             properties:
  *               userId:
- *                 type: string
+ *                 type: integer
  *                 description: The user's ID
- *                 example: "user123"
  *               hourlySalary:
  *                 type: integer
  *                 description: The hourly salary to set
@@ -571,8 +596,7 @@ export const editHoursalary = async (req: AuthenticatedRequest, res: Response<Ed
  *           type: object
  *           properties:
  *             userId:
- *               type: string
- *               description: The user's ID
+ *               type: integer
  *             newSalary:
  *               type: integer
  *               description: The new hourly salary
@@ -655,8 +679,7 @@ export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpa
  *               type: object
  *               properties:
  *                 userid:
- *                   type: string
- *                   description: The user's ID
+ *                   type: integer
  *                 unpaid_hours:
  *                   type: integer
  *                   description: Total unpaid hours for the user
