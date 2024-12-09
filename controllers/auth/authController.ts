@@ -76,8 +76,13 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         const userId = result.rows[0].id;
 
         res.status(201).json({ message: `User registered successfully ${username}`, userId });
-    } catch (error) {
-        res.status(500).json({ message: "Registration failed", error });
+    } catch (error: any) {
+        if (error.code === '23505' && error.constraint === 'user_username_key') {
+            // Adjust 'user_username_key' to your constraint name if it's different
+            res.status(400).json({ message: "Username is already taken" });
+        } else {
+            res.status(500).json({message: "Registration failed", error});
+        }
     }
 };
 
