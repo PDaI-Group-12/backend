@@ -194,11 +194,11 @@ export const getUserHistory = async (req: AuthenticatedRequest, res: Response): 
  * @swagger
  * /user/employees:
  *   get:
- *     summary: Get all employers
- *     description: Fetches all users with the role of 'employer'.
+ *     summary: Get all employees
+ *     description: Fetches all users with the role of 'user'.
  *     responses:
  *       200:
- *         description: List of employers
+ *         description: List of employees
  *         content:
  *           application/json:
  *             schema:
@@ -208,15 +208,15 @@ export const getUserHistory = async (req: AuthenticatedRequest, res: Response): 
  *                 properties:
  *                   id:
  *                     type: integer
- *                     description: The ID of the employer
+ *                     description: The ID of the employee
  *                   firstname:
  *                     type: string
- *                     description: The first name of the employer
+ *                     description: The first name of the employee
  *                   lastname:
  *                     type: string
- *                     description: The last name of the employer
+ *                     description: The last name of the employee
  *       404:
- *         description: No employers found
+ *         description: No employees found
  *       500:
  *         description: Internal server error
  */
@@ -232,19 +232,18 @@ export const getAllEmployees = async (req: AuthenticatedRequest, res: Response):
         const result = await pool.query<Employer>(query);
 
         if (result.rows.length === 0) {
-            console.log("No employers found");  // Log when no employers are found
-            res.status(404).json({ message: "No employers found" });
+            res.status(404).json({ message: "No employees found" });
             return;
         }
 
         res.status(200).json({
-            message: "Employers retrieved successfully",
+            message: "Employees retrieved successfully",
             employers: result.rows,
         });
 
     } catch (error) {
-        console.error("Error fetching employers:", error);
-        res.status(500).json({ error: "Failed to fetch employers" });
+        console.error("Error fetching employees:", error);
+        res.status(500).json({ error: "Failed to fetch employees" });
     }
 };
 

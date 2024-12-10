@@ -73,10 +73,6 @@ const transporter = nodemailer.createTransport({
  *                     hours:
  *                       type: integer
  *                       description: Added hours
- *                     requestDate:
- *                       type: string
- *                       format: date-time
- *                       description: Date and time of the request
  *       400:
  *         description: Invalid input
  *       500:

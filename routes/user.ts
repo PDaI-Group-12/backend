@@ -7,5 +7,5 @@ export const userRouter = express.Router();
 userRouter.get('/employees', authenticateToken, getAllEmployees);
 userRouter.get('/history', authenticateToken, getUserHistory);
 userRouter.get('/', authenticateToken, getUserDataAndSalary);
-userRouter.put('/', authenticateToken, editUser);
-userRouter.delete('/', authenticateToken, deleteUser);
+userRouter.put('/edit', authenticateToken, editUser);
+userRouter.delete('/delete', authenticateToken, deleteUser);
