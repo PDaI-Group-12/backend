@@ -356,12 +356,12 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
  *           schema:
  *             type: object
  *             properties:
- *               userId:
+ *               employeeId:
  *                 type: integer
- *                 description: The user's ID
- *               amount:
+ *                 description: The employee's ID
+ *               employerId:
  *                 type: integer
- *                 description: The amount paid
+ *                 description: The employer's ID
  *     responses:
  *       200:
  *         description: Payment marked as done, and details moved to history
@@ -389,7 +389,7 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
  *                   type: string
  *                   description: A success message confirming payment was processed
  *       404:
- *         description: Employee or employer not found, or employee has no unpaid salary
+ *         description: Employee has no unpaid salary
  *       500:
  *         description: Internal server error
  */
@@ -552,6 +552,7 @@ export const paymentDone = async (req: AuthenticatedRequest, res: Response<Error
  *       400:
  *         description: Invalid input
  */
+
 export const setHourSalary = async (req: AuthenticatedRequest, res: Response<SetHourSalaryResponse>): Promise<void> => {
     const { salary } = req.body;
     const user = req.user; // Accessing user info from the token
@@ -598,7 +599,8 @@ export const editHoursalary = async (req: AuthenticatedRequest, res: Response<Ed
  *               description: The new hourly salary
  *     responses:
  *       200:
- *         description: The salary was updated successfully
+ *       403:
+ *         description: Only employers are allowed to update hourly salaries
  *       404:
  *         description: User not found
  */

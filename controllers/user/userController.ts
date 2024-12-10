@@ -7,7 +7,7 @@ import {UserHistory, User, EditUserRequestBody, UpdatedUser, Employer, DeletedUs
 List of functions:
 - getUserDataAndSalary
 - GetUserHistory
-- GetAllEmployers
+- GetAllEmployees
 - editUser
 - deleteUser
 */
@@ -188,7 +188,7 @@ export const getUserHistory = async (req: AuthenticatedRequest, res: Response): 
 };
 
 
-// GetAllEmployers - get all employers from the user table
+// GetAllEmployees - get all employers from the user table
 
 /**
  * @swagger
@@ -227,7 +227,7 @@ export const getAllEmployees = async (req: AuthenticatedRequest, res: Response):
         const query = `
             SELECT id, firstname, lastname 
             FROM "user" 
-            WHERE "role" = 'user'
+            WHERE LOWER("role") != 'employer'
             `;
         const result = await pool.query<Employer>(query);
 
@@ -271,6 +271,7 @@ export const getAllEmployees = async (req: AuthenticatedRequest, res: Response):
  *               type: string
  *             iban:
  *               type: string
+ *
  *     responses:
  *       200:
  *         description: User data updated successfully
