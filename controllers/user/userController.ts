@@ -48,7 +48,7 @@ List of functions:
  *                       type: string
  *                       description: The user's IBAN (International Bank Account Number)
  *                 hourlySalary:
- *                   type: string
+ *                   type: integer
  *                   description: The user's hourly salary or a message if salary data is unavailable
  *       400:
  *         description: Invalid user ID
