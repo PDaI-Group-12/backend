@@ -184,20 +184,6 @@ export const addPermanentSalary = async (req: AuthenticatedRequest, res: Respons
  *   post:
  *     summary: Send salary payment request to employer
  *     description: This endpoint allows the user to request salary payment by submitting details about unpaid hours and permanent salaries. It also sends an email notification to the employer.
- *     parameters:
- *       - in: body
- *         name: paymentRequestData
- *         description: Information about the payment request
- *         required: true
- *         schema:
- *           type: object
- *           properties:
- *             userId:
- *               type: integer
- *               description: The user's ID
- *             amount:
- *               type: integer
- *               description: The requested payment amount
  *     responses:
  *       200:
  *         description: Payment request sent successfully, including unpaid hours and permanent salaries
