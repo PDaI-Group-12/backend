@@ -320,37 +320,24 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
  * @swagger
  * /salary/employeeId/payment/employerId:
  *   post:
- *     summary: Send payment done notification to employee
- *     description: Marks a payment as done for an employee, including salary details and email notification to the employer.
+ *     summary: Send payment notification to employee
+ *     description: Marks a payment as done for an employee, records the details in history, and sends an email notification.
  *     parameters:
  *       - in: path
  *         name: employeeId
  *         required: true
  *         schema:
  *           type: integer
- *         description: The ID of the employee
+ *         description: The ID of the employee.
  *       - in: path
  *         name: employerId
  *         required: true
  *         schema:
  *           type: integer
- *         description: The ID of the employer
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               employeeId:
- *                 type: integer
- *                 description: The employee's ID
- *               employerId:
- *                 type: integer
- *                 description: The employer's ID
+ *         description: The ID of the employer.
  *     responses:
  *       200:
- *         description: Payment marked as done, and details moved to history
+ *         description: Payment processed successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -358,26 +345,28 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
  *               properties:
  *                 employeeId:
  *                   type: integer
- *                   description: The employee's ID
+ *                   description: The employee's ID.
  *                 totalHours:
  *                   type: integer
- *                   description: Total unpaid hours for the employee
+ *                   description: Total unpaid hours.
  *                 hourlySalary:
  *                   type: integer
- *                   description: Hourly salary of the employee
+ *                   description: The hourly salary rate.
  *                 permanentSalary:
  *                   type: integer
- *                   description: Unpaid permanent salary of the employee
+ *                   description: Total unpaid permanent salary.
  *                 totalSalary:
  *                   type: integer
- *                   description: The total salary paid (sum of unpaid hours and permanent salary)
+ *                   description: Total salary paid.
  *                 message:
  *                   type: string
- *                   description: A success message confirming payment was processed
+ *                   description: Confirmation message.
+ *       403:
+ *         description: Only employers are allowed to process salary payments.
  *       404:
- *         description: Employee has no unpaid salary
+ *         description: Employee has no unpaid salary.
  *       500:
- *         description: Internal server error
+ *         description: Internal server error.
  */
 
 
@@ -385,6 +374,7 @@ export const paymentDone = async (req: AuthenticatedRequest, res: Response<Error
     try {
         const user = req.user; // Access user info from the middleware
         const userid = user?.id; // Assuming the token contains the user ID as `id`
+        const role = user?.role;
 
         // Validate the extracted userid
         if (typeof userid !== 'number') {
@@ -393,9 +383,12 @@ export const paymentDone = async (req: AuthenticatedRequest, res: Response<Error
         }
         const { employerId, employeeId } = req.params;
 
-        // 1. Check if employerId is valid and user is employer
-        const employerCheckQuery = `SELECT id, role FROM "user" WHERE id = $1 AND role = 'employer'`;
-        const employerResult = await pool.query(employerCheckQuery, [employerId]);
+
+        if (role != 'employer') {
+            res.status(403).json({ message: "Only employer is allowed to make salary payment" });
+            return;
+        }
+
 
         // 2. Check if employee has unpaid salaries
         const salaryCheckQuery = `
