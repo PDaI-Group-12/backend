@@ -238,7 +238,7 @@ export const getAllEmployees = async (req: AuthenticatedRequest, res: Response):
 
         res.status(200).json({
             message: "Employees retrieved successfully",
-            employers: result.rows,
+            employees: result.rows,
         });
 
     } catch (error) {

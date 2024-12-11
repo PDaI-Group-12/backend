@@ -581,7 +581,7 @@ export const setHourSalary = async (req: AuthenticatedRequest, res: Response<Set
 export const editHoursalary = async (req: AuthenticatedRequest, res: Response<EditHourSalaryResponse>): Promise<void> => {
 /**
  * @swagger
- * /salary/:employeeId/edithourly:
+ * /salary/:employeeId/salary/edithourly:
  *   put:
  *     summary: Edit hourly salary
  *     parameters:
