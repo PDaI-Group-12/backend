@@ -143,7 +143,6 @@ export const getUserDataAndSalary = async (req: AuthenticatedRequest, res: Respo
  *         description: Internal server error
  */
 
-
 export const getUserHistory = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
         const user = req.user; // Access user info from the middleware
@@ -157,9 +156,10 @@ export const getUserHistory = async (req: AuthenticatedRequest, res: Response): 
 
         // SQL query to get the user's history (worked hours)
         const query = `
-            SELECT COALESCE(SUM(hours), 0) AS totalhours, COALESCE(SUM(permanent), 0) AS permanentsalary
+            SELECT COALESCE(SUM(hours)::integer, 0) AS totalhours,
+                   COALESCE(SUM(permanent)::integer, 0) AS permanentsalary
             FROM history
-            WHERE userid = $1
+            WHERE userid = $1;
             `;
         const result = await pool.query(query, [userid]); // Execute query to fetch history
 

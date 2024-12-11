@@ -19,7 +19,7 @@ import {
 - paymentDone
 - SetHourSalary
 - editHoursalary
-- GetUnpaid (need to be updated, unpaid hours are stored in request table)
+- GetUnpaid
 */
 
 // Configure Nodemailer transporter
@@ -208,7 +208,7 @@ export const addPermanentSalary = async (req: AuthenticatedRequest, res: Respons
  *                   type: integer
  *                   description: Total unpaid salary (sum of unpaid hours and permanent salary)
  *       400:
- *         description: Invalid user ID, missing user ID, or no unpaid salaries to request
+ *         description: No unpaid salaries
  *       500:
  *         description: Internal server error
  */
@@ -242,7 +242,7 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
         const unpaid_hours = unpaidHoursResult.rows[0]?.unpaid_hours ?? 0; // Total requested hours (default to 0 if not found)
 
         const hourSalaryQuery = `
-            SELECT COALESCE(SUM(salary), 0) AS hourlySalary
+            SELECT COALESCE(salary, 0) AS hourlySalary
             FROM hour_salary
             WHERE userid = $1
         `;
@@ -276,10 +276,10 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
                 subject: 'Salary Payment Request Submitted',
                 html: `
                     <h2>Salary Payment Request</h2>
-                    <p>Dear ${user|| 'User'},</p>
+                     <p>Dear ${user?.firstname || 'User'},</p>
                     <p>You have submitted a payment request with the following details:</p>
                     <ul>
-                        <li>User ID: ${userid}</li>
+                        <li>User Id: ${userid}</li>
                         <li>Unpaid Hours: ${unpaid_hours}</li>
                         <li>Hourly Salary Rate: ${hourlySalary}</li>
                         <li>Unpaid Permanent Salaries: ${unpaid_permanent_salaries}</li>
@@ -297,7 +297,7 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
 
         // Combine the total hours and unpaid salaries in the response
         res.status(200).json({
-            message: "Unpaid salaries retrieved successfully",
+            message: "Payment request sent successfully, including unpaid hours and permanent salaries",
             data: {
                 userid,
                 unpaid_hours,
@@ -708,7 +708,7 @@ export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpa
         const unpaid_hours = unpaidHoursResult.rows[0]?.unpaid_hours ?? 0; // Total requested hours (default to 0 if not found)
 
         const hourSalaryQuery = `
-            SELECT COALESCE(SUM(salary), 0) AS hourlySalary
+            SELECT COALESCE(salary, 0) AS hourlySalary
             FROM hour_salary
             WHERE userid = $1
         `;
