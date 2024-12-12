@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { pool } from "../../database/connection";
 import {AuthenticatedRequest} from "../auth/types";
-import {UserHistory, User, EditUserRequestBody, UpdatedUser, Employer, DeletedUser} from "./types";
+import {UserHistory, User, EditUserRequestBody, UpdatedUser, Employer, DeletedUser, Employee, EmployerEmployeesResponse} from "./types";
 
 /*
 List of functions:
@@ -395,5 +395,83 @@ export const deleteUser = async (req: AuthenticatedRequest, res: Response): Prom
     } catch (error) {
         console.error(`Error deleting user with ID ${userid}:`, error);
         res.status(500).json({ message: "Error deleting user and associated data", error });
+    }
+};
+
+
+/**
+ * @swagger
+ * /employer/employees:
+ *   get:
+ *     summary: Get all employees for an employer
+ *     description: Fetches all users with the role of 'user', but only if the requesting user is an employer.
+ *     responses:
+ *       200:
+ *         description: List of employees retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Success message
+ *                 employees:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       username:
+ *                         type: string
+ *                         description: The username of the employee
+ *                       firstname:
+ *                         type: string
+ *                         description: The first name of the employee
+ *                       lastname:
+ *                         type: string
+ *                         description: The last name of the employee
+ *       403:
+ *         description: Access denied. Only employers can access this resource.
+ *       404:
+ *         description: No employees found
+ *       500:
+ *         description: Internal server error
+ */
+
+export const getEmployeesByEmployer = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        const user = req.user; // Access user info from the middleware
+
+        // Check if the user is an employer
+        if (user?.role.toLowerCase() !== 'employer') {
+            res.status(403).json({ message: "Access denied. Only employers can access this resource." });
+            return;
+        }
+
+        // SQL query to fetch employees (users with role 'user')
+        const query = `
+            SELECT username, firstname, lastname 
+            FROM "user" 
+            WHERE LOWER("role") = 'user';
+        `;
+
+        const result = await pool.query<Employee>(query);
+
+        // Check if any employees were found
+        if (result.rows.length === 0) {
+            res.status(404).json({ message: "No employees found." });
+            return;
+        }
+
+        // Respond with the list of employees
+        const response: EmployerEmployeesResponse = {
+            message: "Employees retrieved successfully. These are your employees. Please visit the payment page for salary payment.",
+            employees: result.rows,
+        };
+        res.status(200).json(response);
+
+    } catch (error) {
+        console.error("Error fetching employees for employer:", error);
+        res.status(500).json({ message: "Error fetching employees", error });
     }
 };
