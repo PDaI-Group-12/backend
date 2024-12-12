@@ -375,16 +375,17 @@ export const paymentDone = async (req: AuthenticatedRequest, res: Response<Error
         const user = req.user; // Access user info from the middleware
         const userid = user?.id; // Assuming the token contains the user ID as `id`
         const role = user?.role;
+        console.log(req.user);
 
         // Validate the extracted userid
         if (typeof userid !== 'number') {
             res.status(400).json({ message: "Invalid user ID. Please log in again." });
             return;
         }
-        const { employerId, employeeId } = req.params;
+        const { employeeId, employerId } = req.params;
 
 
-        if (role != 'employer') {
+        if (role !== 'employer') {
             res.status(403).json({ message: "Only employer is allowed to make salary payment" });
             return;
         }
@@ -649,7 +650,7 @@ export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpa
  *     description: This endpoint calculates and returns the total unpaid hours and salary for the authenticated user, including unpaid permanent salaries and hourly salaries.
  *     responses:
  *       200:
- *         description: A list of unpaid details for the user
+ *         description: Unpaid salaries retrieved successfully
  *         content:
  *           application/json:
  *             schema:
