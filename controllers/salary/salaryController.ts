@@ -757,7 +757,7 @@ export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpa
  *     description: This endpoint calculates and returns the unpaid hours and salaries for the employer, including unpaid permanent salaries and hourly salaries.
  *     responses:
  *       200:
- *         description: unpaid salaries retrieved successfully
+ *         description: Unpaid salaries retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -780,6 +780,9 @@ export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpa
  *                       lastname:
  *                         type: string
  *                         description: Last name of the user
+ *                       iban:
+ *                         type: string
+ *                         description: IBAN of the user
  *                       unpaid_hours:
  *                         type: integer
  *                         description: Total unpaid hours for the user
@@ -817,6 +820,7 @@ export const getAllUnpaid = async (req: AuthenticatedRequest, res: Response<GetA
                 u.id AS userid,
                 u.firstname,
                 u.lastname,
+                u.iban,
                 COALESCE(SUM(r.hours), 0) AS unpaid_hours,
                 COALESCE(MAX(h.salary), 0) AS hourlySalary,
                 COALESCE(SUM(p.salary), 0) AS unpaid_permanent_salaries,
@@ -835,6 +839,7 @@ export const getAllUnpaid = async (req: AuthenticatedRequest, res: Response<GetA
             userid: record.userid,
             firstname: record.firstname,
             lastname: record.lastname,
+            iban: record.iban,
             unpaid_hours: record.unpaid_hours,
             hourlySalary: record.hourlysalary,
             unpaid_permanent_salaries: record.unpaid_permanent_salaries,

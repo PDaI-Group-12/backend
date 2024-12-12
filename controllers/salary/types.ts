@@ -74,6 +74,7 @@ export interface UnpaidRecord {
     userid: number;
     firstname: string;
     lastname: string;
+    iban:string
     unpaid_hours: number;
     hourlySalary: number;
     unpaid_permanent_salaries: number;
