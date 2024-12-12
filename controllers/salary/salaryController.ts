@@ -757,7 +757,7 @@ export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpa
  *     description: This endpoint calculates and returns the unpaid hours and salaries for the employer, including unpaid permanent salaries and hourly salaries.
  *     responses:
  *       200:
- *         description: All unpaid salaries retrieved successfully
+ *         description: unpaid salaries retrieved successfully
  *         content:
  *           application/json:
  *             schema:
