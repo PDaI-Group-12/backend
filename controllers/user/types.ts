@@ -13,6 +13,17 @@ export interface UserHistory {
     permanentsalary: number;
 }
 
+export interface Employee {
+    username: string;
+    firstname: string;
+    lastname: string
+}
+
+export interface EmployerEmployeesResponse {
+    message: string;
+    employees: Employee[];
+}
+
 export interface Employer {
     id: number;
     firstname: string;
@@ -37,3 +48,4 @@ export interface UpdatedUser {
 export interface DeletedUser {
     id: number;
 }
+
