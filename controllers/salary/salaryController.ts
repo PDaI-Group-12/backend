@@ -181,7 +181,7 @@ export const addPermanentSalary = async (req: AuthenticatedRequest, res: Respons
 /**
  * @swagger
  * /salary/payment/request:
- *   post:
+ *   get:
  *     summary: Send salary payment request to employer
  *     description: This endpoint allows the user to request salary payment by submitting details about unpaid hours and permanent salaries. It also sends an email notification to the employer.
  *     responses:
@@ -319,7 +319,7 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
 /**
  * @swagger
  * /salary/employeeId/payment/employerId:
- *   post:
+ *   get:
  *     summary: Send payment notification to employee
  *     description: Marks a payment as done for an employee, records the details in history, and sends an email notification.
  *     parameters:
