@@ -753,8 +753,8 @@ export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpa
  * @swagger
  * /salary/listunpaid:
  *   get:
- *     summary: Get all unpaid salaries
- *     description: This endpoint calculates and returns the total unpaid hours and salary for the employer, including unpaid permanent salaries and hourly salaries.
+ *     summary: List all unpaid salaries
+ *     description: This endpoint calculates and returns the unpaid hours and salaries for the employer, including unpaid permanent salaries and hourly salaries.
  *     responses:
  *       200:
  *         description: All unpaid salaries retrieved successfully
@@ -795,11 +795,10 @@ export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpa
  *       400:
  *         description: No unpaid salaries found
  *       403:
- *         description:Only employers are allowed to process salary payments.
+ *         description: Unauthorized access (only employers can process salary payments)
  *       500:
  *         description: Internal server error
  */
-
 
 export const getAllUnpaid = async (req: AuthenticatedRequest, res: Response<GetAllUnpaidResponse>): Promise<void> => {
     try {
