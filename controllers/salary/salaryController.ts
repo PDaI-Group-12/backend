@@ -9,7 +9,10 @@ import {
     PaymentRequestData,
     PaymentDoneData,
     SetHourSalaryResponse,
-    EditHourSalaryResponse, GetUnpaidResponse
+    EditHourSalaryResponse,
+    GetUnpaidResponse,
+    UnpaidRecord,
+    GetAllUnpaidResponse
 } from "../salary/types"
 
 /* List of functions:
@@ -744,3 +747,115 @@ export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpa
         res.status(500).json({ message: "Error retrieving unpaid records", error });
     }
 };
+// GetAllUnpaid
+
+/**
+ * @swagger
+ * /salary/listunpaid:
+ *   get:
+ *     summary: Get all unpaid salaries
+ *     description: This endpoint calculates and returns the total unpaid hours and salary for the employer, including unpaid permanent salaries and hourly salaries.
+ *     responses:
+ *       200:
+ *         description: All unpaid salaries retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Status message indicating the success of the operation
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       userid:
+ *                         type: integer
+ *                         description: Unique ID of the user
+ *                       firstname:
+ *                         type: string
+ *                         description: First name of the user
+ *                       lastname:
+ *                         type: string
+ *                         description: Last name of the user
+ *                       unpaid_hours:
+ *                         type: integer
+ *                         description: Total unpaid hours for the user
+ *                       hourlySalary:
+ *                         type: integer
+ *                         description: Hourly salary rate of the user
+ *                       unpaid_permanent_salaries:
+ *                         type: integer
+ *                         description: Unpaid salary from permanent contracts
+ *                       totalSalary:
+ *                         type: integer
+ *                         description: Total unpaid salary (sum of unpaid hours and permanent salary)
+ *       400:
+ *         description: No unpaid salaries found
+ *       403:
+ *         description:Only employers are allowed to process salary payments.
+ *       500:
+ *         description: Internal server error
+ */
+
+
+export const getAllUnpaid = async (req: AuthenticatedRequest, res: Response<GetAllUnpaidResponse>): Promise<void> => {
+    try {
+        const user = req.user;
+        const role = user?.role;
+
+        // Validate that request is from an employer
+        if (role !== 'employer') {
+            res.status(403).json({ message: "Only employers are allowed to process salary payments." });
+            return;
+        }
+
+        // Query to retrieve all unpaid records grouped by userid
+        const unpaidRecordsQuery = `
+            SELECT 
+                u.id AS userid,
+                u.firstname,
+                u.lastname,
+                COALESCE(SUM(r.hours), 0) AS unpaid_hours,
+                COALESCE(MAX(h.salary), 0) AS hourlySalary,
+                COALESCE(SUM(p.salary), 0) AS unpaid_permanent_salaries,
+                (COALESCE(SUM(r.hours), 0) * COALESCE(MAX(h.salary), 0)) + COALESCE(SUM(p.salary), 0) AS totalSalary
+            FROM "user" u
+            LEFT JOIN request r ON u.id = r.userid
+            LEFT JOIN hour_salary h ON u.id = h.userid
+            LEFT JOIN permanent_salary p ON u.id = p.userid
+            GROUP BY u.id;
+        `;
+
+        const unpaidRecordsResult = await pool.query(unpaidRecordsQuery);
+
+        // Map the result to match the expected structure (UnpaidRecord[])
+        const unpaidRecords: UnpaidRecord[] = unpaidRecordsResult.rows.map((record: any) => ({
+            userid: record.userid,
+            firstname: record.firstname,
+            lastname: record.lastname,
+            unpaid_hours: record.unpaid_hours,
+            hourlySalary: record.hourlysalary,
+            unpaid_permanent_salaries: record.unpaid_permanent_salaries,
+            totalSalary: record.totalsalary
+        }));
+
+        // Check if there are no unpaid records
+        if (unpaidRecords.length === 0) {
+            res.status(400).json({ message: "No unpaid salaries to request" });
+            return;
+        }
+
+        // Respond with the list of unpaid records grouped by userid
+        res.status(200).json({
+            message: "Unpaid salaries retrieved successfully",
+            data: unpaidRecords,  // 'data' should be an array of unpaidRecords
+        });
+    } catch (error) {
+        console.error("Error retrieving unpaid records:", error);
+        res.status(500).json({ message: "internal server error", error });
+    }
+};
+

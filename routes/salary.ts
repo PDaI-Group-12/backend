@@ -1,5 +1,5 @@
 import express from "express";
-import {addHours, addPermanentSalary, paymentRequest, paymentDone, setHourSalary, getUnpaid, editHoursalary} from "../controllers/salary/salaryController"; // Updated import
+import {addHours, addPermanentSalary, paymentRequest, paymentDone, setHourSalary, getUnpaid, editHoursalary,getAllUnpaid} from "../controllers/salary/salaryController"; // Updated import
 import { authenticateToken } from "../middleware/authMiddleware";
 
 export const salaryRouter = express.Router();
@@ -9,6 +9,7 @@ salaryRouter.post('/hours', authenticateToken, addHours);
 salaryRouter.post('/permanent', authenticateToken, addPermanentSalary);
 salaryRouter.post('/hourly', authenticateToken, setHourSalary);
 salaryRouter.get('/unpaid', authenticateToken, getUnpaid);
+salaryRouter.get('/listunpaid',authenticateToken,getAllUnpaid)
 salaryRouter.put('/:employeeId/salary/edithourly', authenticateToken, editHoursalary);
 
 

@@ -70,3 +70,18 @@ export interface GetUnpaidResponse {
     };
     error?: any; // Optional error field
 }
+export interface UnpaidRecord {
+    userid: number;
+    firstname: string;
+    lastname: string;
+    unpaid_hours: number;
+    hourlySalary: number;
+    unpaid_permanent_salaries: number;
+    totalSalary: number;
+}
+
+export interface GetAllUnpaidResponse {
+    message: string;
+    data?: UnpaidRecord[];
+    error?: any;
+}
