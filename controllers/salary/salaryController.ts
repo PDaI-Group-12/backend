@@ -324,7 +324,8 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
  * /salary/employeeId/payment/employerId:
  *   get:
  *     summary: Send payment notification to employee
- *     description: Marks a payment as done for an employee, records the details in history, and sends an email notification.
+ *     description: Payment done for an employee, delete hours from request table and permanent  records the details
+ *     in history and sends an email notification.
  *     parameters:
  *       - in: path
  *         name: employeeId
