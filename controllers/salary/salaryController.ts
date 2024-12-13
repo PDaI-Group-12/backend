@@ -323,9 +323,8 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
  * @swagger
  * /salary/employeeId/payment/employerId:
  *   get:
- *     summary: Send payment notification to employee
- *     description: Payment done for an employee, delete hours from request table and permanent  records the details
- *     in history and sends an email notification.
+ *     summary: Process salary payment for an employee
+ *     description: Processes the payment for an employee, removes the unpaid hours and permanent salary records, logs the details in history, and sends a notification email.
  *     parameters:
  *       - in: path
  *         name: employeeId
@@ -372,7 +371,6 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
  *       500:
  *         description: Internal server error.
  */
-
 
 export const paymentDone = async (req: AuthenticatedRequest, res: Response<ErrorResponse | { message: string; data: PaymentDoneData }>): Promise<void> => {
     try {
