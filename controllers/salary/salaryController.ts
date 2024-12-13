@@ -35,147 +35,6 @@ const transporter = nodemailer.createTransport({
 });
 
 
-// addhours
-/**
- * @swagger
- * /salary/hours:
- *   post:
- *     summary: Add working hours
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               userId:
- *                 type: integer
- *                 description: The user's ID
- *                 example: 1
- *               hours:
- *                 type: integer
- *                 description: Number of hours to add
- *                 example: 30
- *     responses:
- *       201:
- *         description: Hours added successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   description: Success message
- *                 entry:
- *                   type: object
- *                   properties:
- *                     userid:
- *                       type: integer
- *                       description: The user's ID
- *                     hours:
- *                       type: integer
- *                       description: Added hours
- *       400:
- *         description: Invalid input
- *       500:
- *         description: Internal server error
- */
-
-export const addHours = async (req: AuthenticatedRequest, res: Response<ErrorResponse| { message: string; entry: RequestDetails }>): Promise<void> => {
-    const { hours } = req.body;  // Destructure userid and hours from request body
-    const user = req.user; // Accessing user info from the token
-    const userid = user?.id;
-
-    // Validate that hours is a positive number
-    if (hours <= 0) {
-        res.status(400).json({ message: "Hours must be a positive number" });
-        return;
-    }
-
-    try {
-        // SQL query to insert history entry into the database
-        const query = `
-            INSERT INTO request (userid, hours)
-            VALUES ($1, $2)
-            RETURNING userid, hours
-        `;
-        const result = await pool.query(query, [userid, hours]);  // Execute query to insert data
-
-        const entry: RequestDetails = {
-            userid: result.rows[0].userid,
-            hours: result.rows[0].hours,
-            requestDate: result.rows[0].requestDate,
-        };
-
-        res.status(201).json({ message: "Hours added successfully", entry });
-    } catch (error) {
-        console.error("Error adding hours:", error);
-        res.status(500).json({ message: "Error adding hours", error });
-    }
-};
-
-
-// AddPermanent Salary
-
-/**
- * @swagger
- * /salary/permanent:
- *   post:
- *     summary: Add a permanent salary
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               userId:
- *                 type: integer
- *                 description: The user's ID
- *
- *               salary:
- *                 type: integer
- *                 description: The permanent salary to set
- *                 example: 50000
- *     responses:
- *       201:
- *         description: Permanent salary added successfully
- *       400:
- *         description: Invalid input
- */
-
-export const addPermanentSalary = async (req: AuthenticatedRequest, res: Response<ErrorResponse | { message: string; entry: PermanentSalary }>): Promise<void> => {
-    const { salary } = req.body;  // Destructure userid and hours from request body
-    const user = req.user; // Accessing user info from the token
-    const userid = user?.id;
-
-    // Validate that hours is a positive number
-    if (typeof salary !== "number" || salary <= 0) {
-        res.status(400).json({ message: "Permanent salary must be positive value" });
-        return;
-    }
-
-    try {
-        // SQL query to insert history entry into the database
-        const query = `
-            INSERT INTO permanent_salary (userid, salary)
-            VALUES ($1, $2)
-                RETURNING userid, salary
-        `;
-        const result = await pool.query(query, [userid, salary]);  // Execute query to insert data
-
-        const entry: PermanentSalary = {
-            userid: result.rows[0].userid,
-            salary: result.rows[0].salary,
-        };
-
-        res.status(201).json({ message: "Permanent salary added successfully", entry });
-    } catch (error) {
-        console.error("Error adding user history:", error);
-        res.status(500).json({ message: "Error adding permanent salary", error });
-    }
-};
 
 
 // PaymentRequest
@@ -186,6 +45,8 @@ export const addPermanentSalary = async (req: AuthenticatedRequest, res: Respons
  * /salary/payment/request:
  *   get:
  *     summary: Send salary payment request to employer
+ *     tags:
+ *     - Salary
  *     description: This endpoint allows the user to request salary payment by submitting details about unpaid hours and permanent salaries. It also sends an email notification to the employer.
  *     responses:
  *       200:
@@ -324,6 +185,8 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
  * /salary/employeeId/payment/employerId:
  *   get:
  *     summary: Process salary payment for an employee
+ *     tags:
+ *     - Salary
  *     description: Processes the payment for an employee, removes the unpaid hours and permanent salary records, logs the details in history, and sends a notification email.
  *     parameters:
  *       - in: path
@@ -506,190 +369,44 @@ export const paymentDone = async (req: AuthenticatedRequest, res: Response<Error
     }
 };
 
-
-// SetHourSalary
-
-/**
- * @swagger
- * /salary/hourly:
- *   post:
- *     summary: Set hourly salary
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               userId:
- *                 type: integer
- *                 description: The user's ID
- *               hourlySalary:
- *                 type: integer
- *                 description: The hourly salary to set
- *                 example: 30
- *     responses:
- *       201:
- *         description: Hourly salary set successfully
- *       400:
- *         description: Invalid input
- *       403:
- *          description: Your hourly rate has been set. Only employer can now edit your hourly rate
- */
-
-export const setHourSalary = async (req: AuthenticatedRequest, res: Response<SetHourSalaryResponse>): Promise<void> => {
-    const { salary } = req.body;
-    const user = req.user; // Accessing user info from the token
-    const userid = user?.id;
-
-    // Basic input validation
-    if (typeof userid !== 'number' || typeof salary !== 'number') {
-        res.status(400).json({ message: "Invalid input. 'userid' and 'hourly salary' must be numbers." });
-        return;
-    }
-
-    try {
-        // Check if the hourly rate is already set for the user
-        const checkQuery = `SELECT * FROM hour_salary WHERE userid = $1;`;
-        const checkResult = await pool.query(checkQuery, [userid]);
-
-        if (checkResult.rows.length > 0) {
-            // Hourly rate already set
-            res.status(403).json({ message: "Your hourly rate has been set. Only employer can now edit your hourly rate." });
-            return;
-        }
-
-        // Insert new hourly rate
-        const insertQuery = `INSERT INTO hour_salary (userid, salary) VALUES ($1, $2) RETURNING *;`;
-        const insertResult = await pool.query(insertQuery, [userid, salary]);
-
-        res.status(201).json({ message: "Hourly salary set successfully", data: insertResult.rows[0] });
-    } catch (error) {
-        console.error('Error posting to hourly_salary:', error);
-        res.status(500).json({ message: "Failed to set hourly salary", error });
-    }
-};
-
-
-// editHoursalary
-
-export const editHoursalary = async (req: AuthenticatedRequest, res: Response<EditHourSalaryResponse>): Promise<void> => {
-/**
- * @swagger
- * /salary/:employeeId/salary/edithourly:
- *   put:
- *     summary: Edit hourly salary
- *     parameters:
- *       - in: body
- *         name: salaryData
- *         description: User's new hourly salary
- *         required: true
- *         schema:
- *           type: object
- *           properties:
- *             userId:
- *               type: integer
- *             newSalary:
- *               type: integer
- *               description: The new hourly salary
- *     responses:
- *       200:
- *       403:
- *         description: Only employers are allowed to update hourly salaries
- *       404:
- *         description: User not found
- */
-
-    try {
-        const user = req.user;
-        const userId = user?.id;
-        const { employeeId } = req.params;
-        const { newSalary } = req.body;
-
-        if (!userId || !employeeId || newSalary == null) {
-            res.status(400).json({ message: "Missing required information." });
-            return;
-        }
-
-        const employerCheckQuery = `
-            SELECT role FROM "user" 
-            WHERE id = $1 AND role = 'employer'
-            `;
-        const employerCheckResult = await pool.query(employerCheckQuery, [userId]);
-
-        if (employerCheckResult.rowCount === 0) {
-            res.status(403).json({ message: "Only employers are allowed to update hourly salaries." });
-            return;
-        }
-
-        const employeeCheckQuery = `
-            SELECT id FROM "user" 
-            WHERE id = $1
-            `;
-        const employeeCheckResult = await pool.query(employeeCheckQuery, [employeeId]);
-
-        if (employeeCheckResult.rowCount === 0) {
-            res.status(404).json({ message: "Employee not found." });
-            return;
-        }
-
-        const updateSalaryQuery = `
-            UPDATE hour_salary
-            SET salary = $1
-            WHERE userid = $2
-        `;
-        await pool.query(updateSalaryQuery, [newSalary, employeeId]);
-
-        res.status(200).json({
-            message: "Hourly salary updated successfully.",
-            data: {
-                employeeId,
-                newSalary,
-            },
-        });
-    } catch (error) {
-        console.error("Error updating hourly salary:", error);
-        res.status(500).json({ message: "Internal server error.", error });
-    }
-};
-
-
 // GetUnpaid
 
 export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpaidResponse>): Promise<void> => {
-/**
- * @swagger
- * /salary/unpaid:
- *   get:
- *     summary: Get unpaid salaries
- *     description: This endpoint calculates and returns the total unpaid hours and salary for the authenticated user, including unpaid permanent salaries and hourly salaries.
- *     responses:
- *       200:
- *         description: Unpaid salaries retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 userid:
- *                   type: integer
- *                 unpaid_hours:
- *                   type: integer
- *                   description: Total unpaid hours for the user
- *                 hourlySalary:
- *                   type: integer
- *                   description: Hourly salary rate of the user
- *                 unpaid_permanent_salaries:
- *                   type: integer
- *                   description: Unpaid salary from permanent contracts
- *                 totalSalary:
- *                   type: integer
- *                   description: Total unpaid salary (sum of unpaid hours and permanent salary)
- *       400:
- *         description: Invalid user ID, missing user ID, or no unpaid salaries to request
- *       500:
- *         description: Internal server error
- */
+    /**
+     * @swagger
+     * /salary/unpaid:
+     *   get:
+     *     summary: Get unpaid salaries
+     *     tags:
+     *     - Salary
+     *     description: This endpoint calculates and returns the total unpaid hours and salary for the authenticated user, including unpaid permanent salaries and hourly salaries.
+     *     responses:
+     *       200:
+     *         description: Unpaid salaries retrieved successfully
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 userid:
+     *                   type: integer
+     *                 unpaid_hours:
+     *                   type: integer
+     *                   description: Total unpaid hours for the user
+     *                 hourlySalary:
+     *                   type: integer
+     *                   description: Hourly salary rate of the user
+     *                 unpaid_permanent_salaries:
+     *                   type: integer
+     *                   description: Unpaid salary from permanent contracts
+     *                 totalSalary:
+     *                   type: integer
+     *                   description: Total unpaid salary (sum of unpaid hours and permanent salary)
+     *       400:
+     *         description: Invalid user ID, missing user ID, or no unpaid salaries to request
+     *       500:
+     *         description: Internal server error
+     */
 
     try {
         const user = req.user;
@@ -766,6 +483,8 @@ export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpa
  * /salary/listunpaid:
  *   get:
  *     summary: List all unpaid salaries
+ *     tags:
+ *     - Salary
  *     description: This endpoint calculates and returns the unpaid hours and salaries for the employer, including unpaid permanent salaries and hourly salaries.
  *     responses:
  *       200:
@@ -874,4 +593,304 @@ export const getAllUnpaid = async (req: AuthenticatedRequest, res: Response<GetA
         res.status(500).json({ message: "internal server error", error });
     }
 };
+
+// addhours
+/**
+ * @swagger
+ * /salary/hours:
+ *   post:
+ *     summary: Add working hours
+ *     tags:
+ *     - Salary
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: integer
+ *                 description: The user's ID
+ *                 example: 1
+ *               hours:
+ *                 type: integer
+ *                 description: Number of hours to add
+ *                 example: 30
+ *     responses:
+ *       201:
+ *         description: Hours added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Success message
+ *                 entry:
+ *                   type: object
+ *                   properties:
+ *                     userid:
+ *                       type: integer
+ *                       description: The user's ID
+ *                     hours:
+ *                       type: integer
+ *                       description: Added hours
+ *       400:
+ *         description: Invalid input
+ *       500:
+ *         description: Internal server error
+ */
+
+export const addHours = async (req: AuthenticatedRequest, res: Response<ErrorResponse| { message: string; entry: RequestDetails }>): Promise<void> => {
+    const { hours } = req.body;  // Destructure userid and hours from request body
+    const user = req.user; // Accessing user info from the token
+    const userid = user?.id;
+
+    // Validate that hours is a positive number
+    if (hours <= 0) {
+        res.status(400).json({ message: "Hours must be a positive number" });
+        return;
+    }
+
+    try {
+        // SQL query to insert history entry into the database
+        const query = `
+            INSERT INTO request (userid, hours)
+            VALUES ($1, $2)
+            RETURNING userid, hours
+        `;
+        const result = await pool.query(query, [userid, hours]);  // Execute query to insert data
+
+        const entry: RequestDetails = {
+            userid: result.rows[0].userid,
+            hours: result.rows[0].hours,
+            requestDate: result.rows[0].requestDate,
+        };
+
+        res.status(201).json({ message: "Hours added successfully", entry });
+    } catch (error) {
+        console.error("Error adding hours:", error);
+        res.status(500).json({ message: "Error adding hours", error });
+    }
+};
+
+
+// AddPermanent Salary
+
+/**
+ * @swagger
+ * /salary/permanent:
+ *   post:
+ *     summary: Add a permanent salary
+ *     tags:
+ *     - Salary
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: integer
+ *                 description: The user's ID
+ *
+ *               salary:
+ *                 type: integer
+ *                 description: The permanent salary to set
+ *                 example: 50000
+ *     responses:
+ *       201:
+ *         description: Permanent salary added successfully
+ *       400:
+ *         description: Invalid input
+ */
+
+export const addPermanentSalary = async (req: AuthenticatedRequest, res: Response<ErrorResponse | { message: string; entry: PermanentSalary }>): Promise<void> => {
+    const { salary } = req.body;  // Destructure userid and hours from request body
+    const user = req.user; // Accessing user info from the token
+    const userid = user?.id;
+
+    // Validate that hours is a positive number
+    if (typeof salary !== "number" || salary <= 0) {
+        res.status(400).json({ message: "Permanent salary must be positive value" });
+        return;
+    }
+
+    try {
+        // SQL query to insert history entry into the database
+        const query = `
+            INSERT INTO permanent_salary (userid, salary)
+            VALUES ($1, $2)
+                RETURNING userid, salary
+        `;
+        const result = await pool.query(query, [userid, salary]);  // Execute query to insert data
+
+        const entry: PermanentSalary = {
+            userid: result.rows[0].userid,
+            salary: result.rows[0].salary,
+        };
+
+        res.status(201).json({ message: "Permanent salary added successfully", entry });
+    } catch (error) {
+        console.error("Error adding user history:", error);
+        res.status(500).json({ message: "Error adding permanent salary", error });
+    }
+};
+
+
+// SetHourSalary
+
+/**
+ * @swagger
+ * /salary/hourly:
+ *   post:
+ *     summary: Set hourly salary
+ *     tags:
+ *     - Salary
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: integer
+ *                 description: The user's ID
+ *               hourlySalary:
+ *                 type: integer
+ *                 description: The hourly salary to set
+ *                 example: 30
+ *     responses:
+ *       201:
+ *         description: Hourly salary set successfully
+ *       400:
+ *         description: Invalid input
+ *       403:
+ *          description: Your hourly rate has been set. Only employer can now edit your hourly rate
+ */
+
+export const setHourSalary = async (req: AuthenticatedRequest, res: Response<SetHourSalaryResponse>): Promise<void> => {
+    const { salary } = req.body;
+    const user = req.user; // Accessing user info from the token
+    const userid = user?.id;
+
+    // Basic input validation
+    if (typeof userid !== 'number' || typeof salary !== 'number') {
+        res.status(400).json({ message: "Invalid input. 'userid' and 'hourly salary' must be numbers." });
+        return;
+    }
+
+    try {
+        // Check if the hourly rate is already set for the user
+        const checkQuery = `SELECT * FROM hour_salary WHERE userid = $1;`;
+        const checkResult = await pool.query(checkQuery, [userid]);
+
+        if (checkResult.rows.length > 0) {
+            // Hourly rate already set
+            res.status(403).json({ message: "Your hourly rate has been set. Only employer can now edit your hourly rate." });
+            return;
+        }
+
+        // Insert new hourly rate
+        const insertQuery = `INSERT INTO hour_salary (userid, salary) VALUES ($1, $2) RETURNING *;`;
+        const insertResult = await pool.query(insertQuery, [userid, salary]);
+
+        res.status(201).json({ message: "Hourly salary set successfully", data: insertResult.rows[0] });
+    } catch (error) {
+        console.error('Error posting to hourly_salary:', error);
+        res.status(500).json({ message: "Failed to set hourly salary", error });
+    }
+};
+
+
+// editHoursalary
+
+export const editHoursalary = async (req: AuthenticatedRequest, res: Response<EditHourSalaryResponse>): Promise<void> => {
+/**
+ * @swagger
+ * /salary/:employeeId/salary/edithourly:
+ *   put:
+ *     summary: Edit hourly salary
+ *     tags:
+ *     - Salary
+ *     parameters:
+ *       - in: body
+ *         name: salaryData
+ *         description: User's new hourly salary
+ *         required: true
+ *         schema:
+ *           type: object
+ *           properties:
+ *             userId:
+ *               type: integer
+ *             newSalary:
+ *               type: integer
+ *               description: The new hourly salary
+ *     responses:
+ *       200:
+ *       403:
+ *         description: Only employers are allowed to update hourly salaries
+ *       404:
+ *         description: User not found
+ */
+
+    try {
+        const user = req.user;
+        const userId = user?.id;
+        const { employeeId } = req.params;
+        const { newSalary } = req.body;
+
+        if (!userId || !employeeId || newSalary == null) {
+            res.status(400).json({ message: "Missing required information." });
+            return;
+        }
+
+        const employerCheckQuery = `
+            SELECT role FROM "user" 
+            WHERE id = $1 AND role = 'employer'
+            `;
+        const employerCheckResult = await pool.query(employerCheckQuery, [userId]);
+
+        if (employerCheckResult.rowCount === 0) {
+            res.status(403).json({ message: "Only employers are allowed to update hourly salaries." });
+            return;
+        }
+
+        const employeeCheckQuery = `
+            SELECT id FROM "user" 
+            WHERE id = $1
+            `;
+        const employeeCheckResult = await pool.query(employeeCheckQuery, [employeeId]);
+
+        if (employeeCheckResult.rowCount === 0) {
+            res.status(404).json({ message: "Employee not found." });
+            return;
+        }
+
+        const updateSalaryQuery = `
+            UPDATE hour_salary
+            SET salary = $1
+            WHERE userid = $2
+        `;
+        await pool.query(updateSalaryQuery, [newSalary, employeeId]);
+
+        res.status(200).json({
+            message: "Hourly salary updated successfully.",
+            data: {
+                employeeId,
+                newSalary,
+            },
+        });
+    } catch (error) {
+        console.error("Error updating hourly salary:", error);
+        res.status(500).json({ message: "Internal server error.", error });
+    }
+};
+
+
+
 

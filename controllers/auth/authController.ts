@@ -13,6 +13,8 @@ const JWT_SECRET = process.env.JWT_SECRET || "jwt_secret";
  * /auth/register:
  *   post:
  *     summary: Register a new user
+ *     tags:
+ *     - Authorization
  *     description: Creates a new user in the system with the provided details.
  *     requestBody:
  *       required: true
@@ -91,6 +93,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
  * /auth/login:
  *   post:
  *     summary: Log in a user
+ *     tags:
+ *     - Authorization
  *     requestBody:
  *       required: true
  *       content:
