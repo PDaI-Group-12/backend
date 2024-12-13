@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import { pool } from "../../database/connection";
 import {AuthenticatedRequest} from "../auth/types";
 import {UserHistory, User, EditUserRequestBody, UpdatedUser, Employer, DeletedUser, Employee, EmployerEmployeesResponse} from "./types";
@@ -473,5 +473,107 @@ export const getEmployeesByEmployer = async (req: AuthenticatedRequest, res: Res
     } catch (error) {
         console.error("Error fetching employees for employer:", error);
         res.status(500).json({ message: "Error fetching employees", error });
+    }
+};
+
+/**
+ * @swagger
+ * /user/:id:
+ *   get:
+ *     summary: Get user data and hourly salary with userID
+ *     description: Fetches the selected user's data along with their hourly salary.
+ *     parameters:
+ *     - in: path
+ *       name: id
+ *       required: true
+ *       schema:
+ *         type: integer
+ *       description: The ID of the selected user
+ *     responses:
+ *       200:
+ *         description: User data and salary returned successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       description: The user's ID
+ *                     firstname:
+ *                       type: string
+ *                       description: The user's first name
+ *                     lastname:
+ *                       type: string
+ *                       description: The user's last name
+ *                     role:
+ *                       type: string
+ *                       description: The user's role (e.g., employee, employer)
+ *                     iban:
+ *                       type: string
+ *                       description: The user's IBAN (International Bank Account Number)
+ *                 hourlySalary:
+ *                   type: integer
+ *                   description: The user's hourly salary or a message if salary data is unavailable
+ *       400:
+ *         description: Invalid user ID
+ *       403:
+ *         description: Access denied. Only employers can access this resource
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Internal server error
+ */
+
+
+export const getUserDataAndSalaryID = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+
+    try {
+        const employer = req.user
+        const user = req.params;
+        const userid = user?.id;
+
+        // Check if the user is an employer
+        if (employer?.role.toLowerCase() !== 'employer') {
+            res.status(403).json({ message: "Access denied. Only employers can access this resource." });
+            return;
+        }
+
+        // SQL query to fetch user data and associated salary
+        const userDataQuery = `
+            SELECT "user".id, "user".firstname, "user".lastname, "user".role, "user".iban, hour_salary.salary
+            FROM "user"
+                     LEFT JOIN hour_salary ON "user".id = hour_salary.userid
+            WHERE "user".Id = $1
+        `;
+        const result = await pool.query(userDataQuery, [userid]);  // Execute query with userId
+
+
+        // If no user is found, return 404 error
+        if (result.rowCount === 0) {
+            console.log(`User with ID ${userid} not found.`);
+            res.status(404).json({message: "User not found"});
+            return;
+        }
+
+        // If user is found, send user data and salary in response
+        const userData: User = result.rows[0];
+
+        res.json({
+            user: {
+                id: userData.id,
+                firstname: userData.firstname,
+                lastname: userData.lastname,
+                role: userData.role,
+                iban: userData.iban
+            },
+            hourlySalary: userData.salary || "No salary data available"  // Return salary or a default message if not available
+        });
+    } catch (error) {
+        console.error("Error fetching user data:", error);
+        res.status(500).json({message: "Error fetching user data", error});
     }
 };
