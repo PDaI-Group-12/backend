@@ -790,30 +790,36 @@ export const addPermanentSalary = async (req: AuthenticatedRequest, res: Respons
  */
 
 export const setHourSalary = async (req: AuthenticatedRequest, res: Response<SetHourSalaryResponse>): Promise<void> => {
-    const { salary } = req.body;
+    const { hourlySalary, userId } = req.body;
     const user = req.user; // Accessing user info from the token
-    const userid = user?.id;
+    const role = user?.role;
 
     // Basic input validation
-    if (typeof userid !== 'number' || typeof salary !== 'number') {
+    if (typeof userId !== 'number' || typeof hourlySalary !== 'number') {
         res.status(400).json({ message: "Invalid input. 'userid' and 'hourly salary' must be numbers." });
         return;
     }
 
     try {
-        // Check if the hourly rate is already set for the user
+        if (role !== 'employer') {
+            res.status(403).json({ message: "Only employers are allowed to process salary payments." });
+            return;
+        }
+
+        // Check if the user already has an hourly rate
         const checkQuery = `SELECT * FROM hour_salary WHERE userid = $1;`;
-        const checkResult = await pool.query(checkQuery, [userid]);
+        const checkResult = await pool.query(checkQuery, [userId]);
 
         if (checkResult.rows.length > 0) {
-            // Hourly rate already set
-            res.status(403).json({ message: "Your hourly rate has been set. Only employer can now edit your hourly rate." });
+            res.status(409).json({
+                message: "This user already has an hourly rate. Please visit the edit hourly rate page to update the rate."
+            });
             return;
         }
 
         // Insert new hourly rate
         const insertQuery = `INSERT INTO hour_salary (userid, salary) VALUES ($1, $2) RETURNING *;`;
-        const insertResult = await pool.query(insertQuery, [userid, salary]);
+        const insertResult = await pool.query(insertQuery, [userId, hourlySalary]);
 
         res.status(201).json({ message: "Hourly salary set successfully", data: insertResult.rows[0] });
     } catch (error) {
