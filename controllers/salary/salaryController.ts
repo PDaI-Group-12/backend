@@ -496,7 +496,7 @@ export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpa
  *     description: Retrieve all unpaid salary records. Only users with the "employer" role can access this endpoint.
  *     responses:
  *       200:
- *         description: List of unpaid salary records retrieved successfully
+ *         description: unpaid salary records retrieved successfully
  *         content:
  *           application/json:
  *             schema:
