@@ -568,7 +568,9 @@ export const getAllUnpaid = async (req: AuthenticatedRequest, res: Response<GetA
             LEFT JOIN request r ON u.id = r.userid
             LEFT JOIN hour_salary h ON u.id = h.userid
             LEFT JOIN permanent_salary p ON u.id = p.userid
-            GROUP BY u.id;
+            GROUP BY u.id
+            HAVING
+                (COALESCE(SUM(r.hours), 0) * COALESCE(MAX(h.salary), 0)) + COALESCE(SUM(p.salary), 0) > 0;
         `;
 
         const unpaidRecordsResult = await pool.query(unpaidRecordsQuery);
