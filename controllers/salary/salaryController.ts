@@ -486,17 +486,17 @@ export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpa
 
 /**
  * @swagger
- * /unpaid-salaries:
+ * /salary/listunpaid:
  *   get:
  *     summary: Get all unpaid salary records
  *     tags:
- *     - Salaries
+ *       - Salaries
  *     security:
- *         - bearerAuth: []
- *     description: This endpoint retrieves all unpaid salary records for employers. Only users with the "employer" role can access this endpoint.
+ *       - bearerAuth: []
+ *     description: Retrieve all unpaid salary records. Only users with the "employer" role can access this endpoint.
  *     responses:
  *       200:
- *         description: Unpaid salaries retrieved successfully
+ *         description: List of unpaid salary records retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -504,7 +504,7 @@ export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpa
  *               properties:
  *                 message:
  *                   type: string
- *                   description: Status message indicating the success of the operation
+ *                   description: Status message indicating success
  *                 data:
  *                   type: array
  *                   items:
@@ -513,22 +513,14 @@ export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpa
  *                       id:
  *                         type: integer
  *                         description: Unique ID of the unpaid salary request
- *                       userId:
+ *                       userid:
  *                         type: integer
  *                         description: ID of the user for whom the salary is unpaid
- *                       salaryAmount:
- *                         type: number
- *                         format: float
- *                         description: Unpaid salary amount
- *                       requestDate:
- *                         type: string
- *                         format: date-time
- *                         description: Date when the salary request was made
- *                       status:
- *                         type: string
- *                         description: Current status of the salary request (e.g., unpaid)
+ *                       hours:
+ *                         type: integer
+ *                         description: Number of unpaid hours
  *       403:
- *         description: Unauthorized access (only employers can process salary payments)
+ *         description: Unauthorized access (only employers can access this data)
  *       500:
  *         description: Internal server error
  */
