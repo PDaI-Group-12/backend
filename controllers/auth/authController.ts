@@ -7,12 +7,28 @@ import { pool } from "../../database/connection";
 
 const JWT_SECRET = process.env.JWT_SECRET || "jwt_secret";
 
+/**
+ * @swagger
+ * components:
+ *   securitySchemes:
+ *     bearerAuth: # arbitrary name for the security scheme
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT # optional, arbitrary value for documentation purposes
+ *
+ * # 2) Apply the security globally to all operations
+ * security:
+ *   - bearerAuth: [] # use the same name as above
+ */
+
 
 /**
  * @swagger
  * /auth/register:
  *   post:
  *     summary: Register a new user
+ *     tags:
+ *     - Authorization
  *     description: Creates a new user in the system with the provided details.
  *     requestBody:
  *       required: true
@@ -91,6 +107,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
  * /auth/login:
  *   post:
  *     summary: Log in a user
+ *     tags:
+ *     - Authorization
  *     requestBody:
  *       required: true
  *       content:

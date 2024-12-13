@@ -20,6 +20,10 @@ List of functions:
  * /user/:
  *   get:
  *     summary: Get user data and hourly salary
+ *     tags:
+ *     - User
+ *     security:
+ *         - bearerAuth: []
  *     description: Fetches the logged-in user's data along with their hourly salary.
  *     responses:
  *       200:
@@ -113,6 +117,10 @@ export const getUserDataAndSalary = async (req: AuthenticatedRequest, res: Respo
  * /user/history:
  *   get:
  *     summary: Get user's salary history
+ *     tags:
+ *     - User
+ *     security:
+ *         - bearerAuth: []
  *     description: Fetches the total hours worked and permanent salary for the logged-in user.
  *     responses:
  *       200:
@@ -195,6 +203,10 @@ export const getUserHistory = async (req: AuthenticatedRequest, res: Response): 
  * /user/employees:
  *   get:
  *     summary: Get all employees
+ *     tags:
+ *     - User
+ *     security:
+ *         - bearerAuth: []
  *     description: Fetches all users with the role of 'user'.
  *     responses:
  *       200:
@@ -247,164 +259,16 @@ export const getAllEmployees = async (req: AuthenticatedRequest, res: Response):
     }
 };
 
-
-// Edit user
-
-/**
- * @swagger
- * /user/edit:
- *   put:
- *     summary: Edit user data
- *     description: Edits the logged-in user's data.
- *     parameters:
- *       - in: body
- *         name: user
- *         description: User data to be updated
- *         schema:
- *           type: object
- *           properties:
- *             firstname:
- *               type: string
- *             lastname:
- *               type: string
- *             role:
- *               type: string
- *             iban:
- *               type: string
- *
- *     responses:
- *       200:
- *         description: User data updated successfully
- *       400:
- *         description: No fields provided for update
- *       404:
- *         description: User not found
- */
-
-export const editUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const user = req.user; // Accessing user info from the token
-    const userid = user?.id;
-
-
-    try {
-
-        if (typeof userid !== 'number') {
-            res.status(400).json({ message: "Invalid user ID. Please log in again." });
-            return;
-        }
-
-        const { firstname, lastname, role, iban }: EditUserRequestBody = req.body;
-
-        if (!firstname && !lastname && !role && !iban) {
-            res.status(400).json({ message: "No all required fields provided for update" });
-            return;
-        }
-
-        const query = `
-            UPDATE "user"
-            SET
-                firstname = COALESCE($1, firstname),
-                lastname = COALESCE($2, lastname),
-                role = COALESCE($3, role),
-                iban = COALESCE($4, iban)
-            WHERE id = $5
-            RETURNING id, firstname, lastname, role, iban
-            `;
-        const values = [firstname, lastname, role, iban, userid];
-
-        const result = await pool.query<UpdatedUser>(query, values);
-
-        if (result.rowCount === 0) {
-            res.status(404).json({ message: `User with ID not found` });
-            return;
-        }
-
-        const updatedUser: UpdatedUser = result.rows[0];
-        res.status(200).json({
-            message: "User data updated successfully",
-            user: updatedUser,
-        });
-    } catch (error) {
-        console.error("Error updating user data:", error);
-        res.status(500).json({ message: "Error updating user", error });
-    }
-};
-
-
-// deleteUser
-
-/**
- * @swagger
- * /user/delete:
- *   delete:
- *     summary: Delete user account and associated data
- *     description: Deletes the logged-in user's account and associated data.
- *     responses:
- *       200:
- *         description: User and associated data deleted successfully
- *       404:
- *         description: User not found
- *       500:
- *         description: Failed to delete user
- */
-
-export const deleteUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const user = req.user; // Accessing user info from the token
-    const userid = user?.id;
-
-    try {
-        const checkUserQuery = `
-            SELECT id FROM "user" 
-            WHERE id = $1
-        `;
-        const userExists = await pool.query<DeletedUser>(checkUserQuery, [userid]);
-
-        if (userExists.rowCount === 0) {
-            res.status(404).json({ message: "User not found" });
-            return;
-        }
-
-        const deleteHourSalaryQuery = `
-            DELETE FROM hour_salary 
-            WHERE userid = $1
-            `;
-        await pool.query(deleteHourSalaryQuery, [userid]);
-
-        const deletePermanentSalaryQuery = `
-            DELETE FROM permanent_salary 
-            WHERE userid = $1
-            `;
-        await pool.query(deletePermanentSalaryQuery, [userid]);
-
-        const deleteQuery = `
-            DELETE FROM "user" 
-            WHERE id = $1 
-            RETURNING id
-            `;
-        const deleteResult = await pool.query<DeletedUser>(deleteQuery, [userid]);
-
-        if (deleteResult.rowCount === 0) {
-            res.status(500).json({ message: `Failed to delete user with ID ${userid}` });
-            return;
-        }
-
-        const deletedUserId = deleteResult.rows[0].id;
-        res.status(200).json({
-            message: `User with ID ${deletedUserId} and their associated data deleted successfully`,
-        });
-    } catch (error) {
-        console.error(`Error deleting user with ID ${userid}:`, error);
-        res.status(500).json({ message: "Error deleting user and associated data", error });
-    }
-};
-
-
 /**
  * @swagger
  * /employer/employees:
  *   get:
  *     summary: Get all employees for an employer
  *     description: Fetches all users with the role of 'user', but only if the requesting user is an employer.
+ *     tags:
+ *     - User
+ *     security:
+ *         - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of employees retrieved successfully
@@ -482,6 +346,10 @@ export const getEmployeesByEmployer = async (req: AuthenticatedRequest, res: Res
  *   get:
  *     summary: Get user data and hourly salary with userID
  *     description: Fetches the selected user's data along with their hourly salary.
+ *     tags:
+ *     - User
+ *     security:
+ *         - bearerAuth: []
  *     parameters:
  *     - in: path
  *       name: id
@@ -577,3 +445,164 @@ export const getUserDataAndSalaryID = async (req: AuthenticatedRequest, res: Res
         res.status(500).json({message: "Error fetching user data", error});
     }
 };
+
+
+// Edit user
+
+/**
+ * @swagger
+ * /user/edit:
+ *   put:
+ *     summary: Edit user data
+ *     tags:
+ *     - User
+ *     security:
+ *         - bearerAuth: []
+ *     description: Edits the logged-in user's data.
+ *     parameters:
+ *       - in: body
+ *         name: user
+ *         description: User data to be updated
+ *         schema:
+ *           type: object
+ *           properties:
+ *             firstname:
+ *               type: string
+ *             lastname:
+ *               type: string
+ *             role:
+ *               type: string
+ *             iban:
+ *               type: string
+ *
+ *     responses:
+ *       200:
+ *         description: User data updated successfully
+ *       400:
+ *         description: No fields provided for update
+ *       404:
+ *         description: User not found
+ */
+
+export const editUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const user = req.user; // Accessing user info from the token
+    const userid = user?.id;
+
+
+    try {
+
+        if (typeof userid !== 'number') {
+            res.status(400).json({ message: "Invalid user ID. Please log in again." });
+            return;
+        }
+
+        const { firstname, lastname, role, iban }: EditUserRequestBody = req.body;
+
+        if (!firstname && !lastname && !role && !iban) {
+            res.status(400).json({ message: "No all required fields provided for update" });
+            return;
+        }
+
+        const query = `
+            UPDATE "user"
+            SET
+                firstname = COALESCE($1, firstname),
+                lastname = COALESCE($2, lastname),
+                role = COALESCE($3, role),
+                iban = COALESCE($4, iban)
+            WHERE id = $5
+            RETURNING id, firstname, lastname, role, iban
+            `;
+        const values = [firstname, lastname, role, iban, userid];
+
+        const result = await pool.query<UpdatedUser>(query, values);
+
+        if (result.rowCount === 0) {
+            res.status(404).json({ message: `User with ID not found` });
+            return;
+        }
+
+        const updatedUser: UpdatedUser = result.rows[0];
+        res.status(200).json({
+            message: "User data updated successfully",
+            user: updatedUser,
+        });
+    } catch (error) {
+        console.error("Error updating user data:", error);
+        res.status(500).json({ message: "Error updating user", error });
+    }
+};
+
+
+// deleteUser
+
+/**
+ * @swagger
+ * /user/delete:
+ *   delete:
+ *     summary: Delete user account and associated data
+ *     tags:
+ *     - User
+ *     security:
+ *         - bearerAuth: []
+ *     description: Deletes the logged-in user's account and associated data.
+ *     responses:
+ *       200:
+ *         description: User and associated data deleted successfully
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Failed to delete user
+ */
+
+export const deleteUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const user = req.user; // Accessing user info from the token
+    const userid = user?.id;
+
+    try {
+        const checkUserQuery = `
+            SELECT id FROM "user" 
+            WHERE id = $1
+        `;
+        const userExists = await pool.query<DeletedUser>(checkUserQuery, [userid]);
+
+        if (userExists.rowCount === 0) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+
+        const deleteHourSalaryQuery = `
+            DELETE FROM hour_salary 
+            WHERE userid = $1
+            `;
+        await pool.query(deleteHourSalaryQuery, [userid]);
+
+        const deletePermanentSalaryQuery = `
+            DELETE FROM permanent_salary 
+            WHERE userid = $1
+            `;
+        await pool.query(deletePermanentSalaryQuery, [userid]);
+
+        const deleteQuery = `
+            DELETE FROM "user" 
+            WHERE id = $1 
+            RETURNING id
+            `;
+        const deleteResult = await pool.query<DeletedUser>(deleteQuery, [userid]);
+
+        if (deleteResult.rowCount === 0) {
+            res.status(500).json({ message: `Failed to delete user with ID ${userid}` });
+            return;
+        }
+
+        const deletedUserId = deleteResult.rows[0].id;
+        res.status(200).json({
+            message: `User with ID ${deletedUserId} and their associated data deleted successfully`,
+        });
+    } catch (error) {
+        console.error(`Error deleting user with ID ${userid}:`, error);
+        res.status(500).json({ message: "Error deleting user and associated data", error });
+    }
+};
+
+
