@@ -22,6 +22,8 @@ List of functions:
  *     summary: Get user data and hourly salary
  *     tags:
  *     - User
+ *     security:
+ *         - bearerAuth: []
  *     description: Fetches the logged-in user's data along with their hourly salary.
  *     responses:
  *       200:
@@ -117,6 +119,8 @@ export const getUserDataAndSalary = async (req: AuthenticatedRequest, res: Respo
  *     summary: Get user's salary history
  *     tags:
  *     - User
+ *     security:
+ *         - bearerAuth: []
  *     description: Fetches the total hours worked and permanent salary for the logged-in user.
  *     responses:
  *       200:
@@ -201,6 +205,8 @@ export const getUserHistory = async (req: AuthenticatedRequest, res: Response): 
  *     summary: Get all employees
  *     tags:
  *     - User
+ *     security:
+ *         - bearerAuth: []
  *     description: Fetches all users with the role of 'user'.
  *     responses:
  *       200:
@@ -261,6 +267,8 @@ export const getAllEmployees = async (req: AuthenticatedRequest, res: Response):
  *     description: Fetches all users with the role of 'user', but only if the requesting user is an employer.
  *     tags:
  *     - User
+ *     security:
+ *         - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of employees retrieved successfully
@@ -340,6 +348,8 @@ export const getEmployeesByEmployer = async (req: AuthenticatedRequest, res: Res
  *     description: Fetches the selected user's data along with their hourly salary.
  *     tags:
  *     - User
+ *     security:
+ *         - bearerAuth: []
  *     parameters:
  *     - in: path
  *       name: id
@@ -446,6 +456,8 @@ export const getUserDataAndSalaryID = async (req: AuthenticatedRequest, res: Res
  *     summary: Edit user data
  *     tags:
  *     - User
+ *     security:
+ *         - bearerAuth: []
  *     description: Edits the logged-in user's data.
  *     parameters:
  *       - in: body
@@ -531,6 +543,8 @@ export const editUser = async (req: AuthenticatedRequest, res: Response): Promis
  *     summary: Delete user account and associated data
  *     tags:
  *     - User
+ *     security:
+ *         - bearerAuth: []
  *     description: Deletes the logged-in user's account and associated data.
  *     responses:
  *       200:

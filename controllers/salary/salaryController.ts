@@ -47,6 +47,8 @@ const transporter = nodemailer.createTransport({
  *     summary: Send salary payment request to employer
  *     tags:
  *     - Salary
+ *     security:
+ *         - bearerAuth: []
  *     description: This endpoint allows the user to request salary payment by submitting details about unpaid hours and permanent salaries. It also sends an email notification to the employer.
  *     responses:
  *       200:
@@ -187,6 +189,8 @@ export const paymentRequest = async (req: AuthenticatedRequest, res: Response<Er
  *     summary: Process salary payment for an employee
  *     tags:
  *     - Salary
+ *     security:
+ *         - bearerAuth: []
  *     description: Processes the payment for an employee, removes the unpaid hours and permanent salary records, logs the details in history, and sends a notification email.
  *     parameters:
  *       - in: path
@@ -379,6 +383,8 @@ export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpa
      *     summary: Get unpaid salaries
      *     tags:
      *     - Salary
+     *     security:
+     *         - bearerAuth: []
      *     description: This endpoint calculates and returns the total unpaid hours and salary for the authenticated user, including unpaid permanent salaries and hourly salaries.
      *     responses:
      *       200:
@@ -485,6 +491,8 @@ export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpa
  *     summary: List all unpaid salaries
  *     tags:
  *     - Salary
+ *     security:
+ *         - bearerAuth: []
  *     description: This endpoint calculates and returns the unpaid hours and salaries for the employer, including unpaid permanent salaries and hourly salaries.
  *     responses:
  *       200:
@@ -602,6 +610,8 @@ export const getAllUnpaid = async (req: AuthenticatedRequest, res: Response<GetA
  *     summary: Add working hours
  *     tags:
  *     - Salary
+ *     security:
+ *         - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -686,6 +696,8 @@ export const addHours = async (req: AuthenticatedRequest, res: Response<ErrorRes
  *     summary: Add a permanent salary
  *     tags:
  *     - Salary
+ *     security:
+ *         - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -750,6 +762,8 @@ export const addPermanentSalary = async (req: AuthenticatedRequest, res: Respons
  *     summary: Set hourly salary
  *     tags:
  *     - Salary
+ *     security:
+ *         - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -817,6 +831,8 @@ export const editHoursalary = async (req: AuthenticatedRequest, res: Response<Ed
  *     summary: Edit hourly salary
  *     tags:
  *     - Salary
+ *     security:
+ *         - bearerAuth: []
  *     parameters:
  *       - in: body
  *         name: salaryData
