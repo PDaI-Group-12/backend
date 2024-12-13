@@ -12,7 +12,7 @@ import {
     EditHourSalaryResponse,
     GetUnpaidResponse,
     UnpaidRecord,
-    GetAllUnpaidResponse
+    GetAllUnpaidResponse,
 } from "../salary/types"
 
 /* List of functions:
@@ -486,14 +486,14 @@ export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpa
 
 /**
  * @swagger
- * /salary/listunpaid:
+ * /unpaid-salaries:
  *   get:
- *     summary: List all unpaid salaries
+ *     summary: Get all unpaid salary records
  *     tags:
- *     - Salary
+ *     - Salaries
  *     security:
  *         - bearerAuth: []
- *     description: This endpoint calculates and returns the unpaid hours and salaries for the employer, including unpaid permanent salaries and hourly salaries.
+ *     description: This endpoint retrieves all unpaid salary records for employers. Only users with the "employer" role can access this endpoint.
  *     responses:
  *       200:
  *         description: Unpaid salaries retrieved successfully
@@ -510,32 +510,23 @@ export const getUnpaid = async (req: AuthenticatedRequest, res: Response<GetUnpa
  *                   items:
  *                     type: object
  *                     properties:
- *                       userid:
+ *                       id:
  *                         type: integer
- *                         description: Unique ID of the user
- *                       firstname:
+ *                         description: Unique ID of the unpaid salary request
+ *                       userId:
+ *                         type: integer
+ *                         description: ID of the user for whom the salary is unpaid
+ *                       salaryAmount:
+ *                         type: number
+ *                         format: float
+ *                         description: Unpaid salary amount
+ *                       requestDate:
  *                         type: string
- *                         description: First name of the user
- *                       lastname:
+ *                         format: date-time
+ *                         description: Date when the salary request was made
+ *                       status:
  *                         type: string
- *                         description: Last name of the user
- *                       iban:
- *                         type: string
- *                         description: IBAN of the user
- *                       unpaid_hours:
- *                         type: integer
- *                         description: Total unpaid hours for the user
- *                       hourlySalary:
- *                         type: integer
- *                         description: Hourly salary rate of the user
- *                       unpaid_permanent_salaries:
- *                         type: integer
- *                         description: Unpaid salary from permanent contracts
- *                       totalSalary:
- *                         type: integer
- *                         description: Total unpaid salary (sum of unpaid hours and permanent salary)
- *       400:
- *         description: No unpaid salaries found
+ *                         description: Current status of the salary request (e.g., unpaid)
  *       403:
  *         description: Unauthorized access (only employers can process salary payments)
  *       500:
@@ -554,55 +545,34 @@ export const getAllUnpaid = async (req: AuthenticatedRequest, res: Response<GetA
         }
 
         // Query to retrieve all unpaid records grouped by userid
-        const unpaidRecordsQuery = `
-            SELECT 
-                u.id AS userid,
-                u.firstname,
-                u.lastname,
-                u.iban,
-                COALESCE(SUM(r.hours), 0) AS unpaid_hours,
-                COALESCE(MAX(h.salary), 0) AS hourlySalary,
-                COALESCE(SUM(p.salary), 0) AS unpaid_permanent_salaries,
-                (COALESCE(SUM(r.hours), 0) * COALESCE(MAX(h.salary), 0)) + COALESCE(SUM(p.salary), 0) AS totalSalary
-            FROM "user" u
-            LEFT JOIN request r ON u.id = r.userid
-            LEFT JOIN hour_salary h ON u.id = h.userid
-            LEFT JOIN permanent_salary p ON u.id = p.userid
-            GROUP BY u.id
-            HAVING
-                (COALESCE(SUM(r.hours), 0) * COALESCE(MAX(h.salary), 0)) + COALESCE(SUM(p.salary), 0) > 0;
+        const unpaidRecordsQuery =`
+            SELECT * FROM request
         `;
+
+
+
 
         const unpaidRecordsResult = await pool.query(unpaidRecordsQuery);
 
         // Map the result to match the expected structure (UnpaidRecord[])
-        const unpaidRecords: UnpaidRecord[] = unpaidRecordsResult.rows.map((record: any) => ({
-            userid: record.userid,
-            firstname: record.firstname,
-            lastname: record.lastname,
-            iban: record.iban,
-            unpaid_hours: record.unpaid_hours,
-            hourlySalary: record.hourlysalary,
-            unpaid_permanent_salaries: record.unpaid_permanent_salaries,
-            totalSalary: record.totalsalary
-        }));
 
-        // Check if there are no unpaid records
-        if (unpaidRecords.length === 0) {
-            res.status(400).json({ message: "No unpaid salaries to request" });
-            return;
-        }
+
+
+
 
         // Respond with the list of unpaid records grouped by userid
         res.status(200).json({
             message: "Unpaid salaries retrieved successfully",
-            data: unpaidRecords,  // 'data' should be an array of unpaidRecords
+            data: unpaidRecordsResult.rows,  // 'data' should be an array of unpaidRecords
         });
     } catch (error) {
         console.error("Error retrieving unpaid records:", error);
         res.status(500).json({ message: "internal server error", error });
     }
 };
+
+
+
 
 // addhours
 /**
