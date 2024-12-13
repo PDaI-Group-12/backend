@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import nodemailer from 'nodemailer';
 import { pool } from "../../database/connection";
 import { AuthenticatedRequest} from "../auth/types";
@@ -513,7 +513,7 @@ export const paymentDone = async (req: AuthenticatedRequest, res: Response<Error
  * @swagger
  * /salary/hourly:
  *   post:
- *     summary: Set a hourly salary
+ *     summary: Set hourly salary
  *     requestBody:
  *       required: true
  *       content:
@@ -533,6 +533,8 @@ export const paymentDone = async (req: AuthenticatedRequest, res: Response<Error
  *         description: Hourly salary set successfully
  *       400:
  *         description: Invalid input
+ *       403:
+ *          description: Your hourly rate has been set. Only employer can now edit your hourly rate
  */
 
 export const setHourSalary = async (req: AuthenticatedRequest, res: Response<SetHourSalaryResponse>): Promise<void> => {
@@ -547,10 +549,21 @@ export const setHourSalary = async (req: AuthenticatedRequest, res: Response<Set
     }
 
     try {
-        const query = `INSERT INTO hour_salary (userid, salary) VALUES ($1, $2) RETURNING *;`;
-        const result = await pool.query(query, [userid, salary]);
+        // Check if the hourly rate is already set for the user
+        const checkQuery = `SELECT * FROM hour_salary WHERE userid = $1;`;
+        const checkResult = await pool.query(checkQuery, [userid]);
 
-        res.status(201).json({ message: "Hourly salary set successfully", data: result.rows[0] });
+        if (checkResult.rows.length > 0) {
+            // Hourly rate already set
+            res.status(403).json({ message: "Your hourly rate has been set. Only employer can now edit your hourly rate." });
+            return;
+        }
+
+        // Insert new hourly rate
+        const insertQuery = `INSERT INTO hour_salary (userid, salary) VALUES ($1, $2) RETURNING *;`;
+        const insertResult = await pool.query(insertQuery, [userid, salary]);
+
+        res.status(201).json({ message: "Hourly salary set successfully", data: insertResult.rows[0] });
     } catch (error) {
         console.error('Error posting to hourly_salary:', error);
         res.status(500).json({ message: "Failed to set hourly salary", error });
